@@ -1,20 +1,22 @@
 import Link from "next/link";
-import { ArrowLeft, FileText, Image as ImageIcon, LockKeyhole, MapPin, Mic, Pencil, ShieldCheck, UserRound } from "lucide-react";
+import { ArrowLeft, Box, FileText, Image as ImageIcon, LockKeyhole, MapPin, Mic, Pencil, ShieldCheck, UserRound } from "lucide-react";
 import { notFound } from "next/navigation";
 import AppShell from "@/components/app-shell";
 import { requireCurrentUser } from "@/lib/current-user";
 import { getFieldMetadataForRecord } from "@/lib/field-records";
 import { getRecordForUser } from "@/lib/records";
 import { signedAssetUrl } from "@/lib/r2";
+import { getSpatialAnchorForRecord } from "@/lib/spatial";
 
 export const dynamic = "force-dynamic";
 
 export default async function RecordPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const user = await requireCurrentUser();
-  const [record, field] = await Promise.all([
+  const [record, field, spatial] = await Promise.all([
     getRecordForUser(id, user.localUserId),
-    getFieldMetadataForRecord(id, user.localUserId)
+    getFieldMetadataForRecord(id, user.localUserId),
+    getSpatialAnchorForRecord(id, user.localUserId)
   ]);
   if (!record) notFound();
 
@@ -33,6 +35,7 @@ export default async function RecordPage({ params }: { params: Promise<{ id: str
         <div className="record-detail-title"><p className="eyebrow">{String(record.record_type)} · {String(record.status)}</p><h1>{record.title ? String(record.title) : record.description ? String(record.description).slice(0, 80) : "Untitled record"}</h1></div>
         <div className="record-header-actions">
           <span className={`visibility-badge ${String(record.visibility)}`}><LockKeyhole size={12} /> {String(record.visibility)}</span>
+          {spatial ? <Link className="secondary-button" href={`/workspace?project=${encodeURIComponent(spatial.projectSlug)}&record=${id}`}><Box size={14} /> Show in 3D</Link> : null}
           {record.can_edit ? <Link className="secondary-button" href={`/records/${id}/edit`}><Pencil size={14} /> Edit</Link> : null}
         </div>
       </div>
@@ -44,6 +47,8 @@ export default async function RecordPage({ params }: { params: Promise<{ id: str
 
         <aside className="record-inspector">
           <section><p className="eyebrow">Observation</p><h2>{record.description ? String(record.description) : "No description yet"}</h2>{record.additional_information ? <p>{String(record.additional_information)}</p> : null}</section>
+
+          {spatial ? <section><p className="eyebrow">3D spatial anchor</p><h3>{spatial.representationName}</h3><p className="mono">XYZ {spatial.point.map((value) => value.toFixed(4)).join(", ")}</p><Link className="secondary-button" href={`/workspace?project=${encodeURIComponent(spatial.projectSlug)}&record=${id}`}><Box size={14} /> Open exact 3D context</Link></section> : null}
 
           {field?.captured_in_field ? <section>
             <p className="eyebrow">Field capture</p>
