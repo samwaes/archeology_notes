@@ -3,6 +3,7 @@ import { getDatabase } from "@/lib/db";
 export type Visibility = "private" | "project" | "public";
 export type RecordType = "note" | "photo" | "document" | "observation" | "measurement" | "voice";
 export type RecordStatus = "draft" | "reviewed" | "verified";
+export type ProjectRole = "owner" | "admin" | "contributor" | "viewer";
 
 export type ProjectSummary = {
   id: string;
@@ -37,6 +38,7 @@ export type CatalogRecord = {
   assetMimeType: string | null;
   assetR2Key: string | null;
   createdAt: string;
+  canEdit: boolean;
 };
 
 export async function ensurePilotMembership(userId: string) {
@@ -100,6 +102,97 @@ export async function getProjectForUser(slug: string, userId: string) {
   return result.rows[0] || null;
 }
 
+export async function createProject(input: { slug: string; name: string; description?: string | null; ownerId: string }) {
+  const database = getDatabase();
+  await database.query("BEGIN");
+  try {
+    const projectResult = await database.query(
+      `INSERT INTO archeology_projects (slug, name, description)
+       VALUES ($1, $2, $3)
+       RETURNING id, slug`,
+      [input.slug, input.name, input.description || null]
+    );
+    const projectId = String(projectResult.rows[0].id);
+    await database.query(
+      `INSERT INTO archeology_project_memberships (project_id, user_id, role)
+       VALUES ($1::uuid, $2::uuid, 'owner')`,
+      [projectId, input.ownerId]
+    );
+    await database.query("COMMIT");
+    await writeAuditEvent(projectId, input.ownerId, "project.created", "project", projectId, { name: input.name, slug: input.slug });
+    return { id: projectId, slug: String(projectResult.rows[0].slug) };
+  } catch (error) {
+    await database.query("ROLLBACK");
+    throw error;
+  }
+}
+
+export async function userCanManageProject(projectId: string, userId: string) {
+  const result = await getDatabase().query(
+    `SELECT role
+     FROM archeology_project_memberships
+     WHERE project_id = $1::uuid AND user_id = $2::uuid
+     LIMIT 1`,
+    [projectId, userId]
+  );
+  return ["owner", "admin"].includes(String(result.rows[0]?.role || ""));
+}
+
+export async function updateProject(input: { projectId: string; actorId: string; name: string; description?: string | null }) {
+  if (!(await userCanManageProject(input.projectId, input.actorId))) throw new Error("You cannot edit this project.");
+  await getDatabase().query(
+    `UPDATE archeology_projects
+     SET name = $1, description = $2, updated_at = NOW()
+     WHERE id = $3::uuid`,
+    [input.name, input.description || null, input.projectId]
+  );
+  await writeAuditEvent(input.projectId, input.actorId, "project.updated", "project", input.projectId, { name: input.name });
+}
+
+export async function createSite(input: { projectId: string; actorId: string; code?: string | null; name: string; description?: string | null }) {
+  if (!(await userCanManageProject(input.projectId, input.actorId))) throw new Error("You cannot add sites to this project.");
+  const result = await getDatabase().query(
+    `INSERT INTO archeology_sites (project_id, code, name, description)
+     VALUES ($1::uuid, $2, $3, $4)
+     RETURNING id`,
+    [input.projectId, input.code || null, input.name, input.description || null]
+  );
+  const id = String(result.rows[0].id);
+  await writeAuditEvent(input.projectId, input.actorId, "site.created", "site", id, { name: input.name, code: input.code || null });
+  return id;
+}
+
+export async function createPhysicalObject(input: {
+  projectId: string;
+  siteId: string;
+  actorId: string;
+  parentObjectId?: string | null;
+  objectType: string;
+  code?: string | null;
+  name: string;
+  description?: string | null;
+}) {
+  if (!(await userCanManageProject(input.projectId, input.actorId))) throw new Error("You cannot add physical objects to this project.");
+  const siteCheck = await getDatabase().query(
+    `SELECT 1 FROM archeology_sites WHERE id = $1::uuid AND project_id = $2::uuid`,
+    [input.siteId, input.projectId]
+  );
+  if (!siteCheck.rowCount) throw new Error("The selected site does not belong to this project.");
+  const result = await getDatabase().query(
+    `INSERT INTO archeology_physical_objects (site_id, parent_object_id, object_type, code, name, description)
+     VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6)
+     RETURNING id`,
+    [input.siteId, input.parentObjectId || null, input.objectType, input.code || null, input.name, input.description || null]
+  );
+  const id = String(result.rows[0].id);
+  await writeAuditEvent(input.projectId, input.actorId, "physical_object.created", "physical_object", id, {
+    name: input.name,
+    objectType: input.objectType,
+    siteId: input.siteId
+  });
+  return id;
+}
+
 export async function listSitesForProject(projectId: string) {
   const result = await getDatabase().query(
     `SELECT id, code, name, description
@@ -146,8 +239,10 @@ export async function listCatalogRecords(projectId: string, userId: string): Pro
             asset.id AS asset_id,
             asset.original_filename AS asset_filename,
             asset.mime_type AS asset_mime_type,
-            asset.r2_key AS asset_r2_key
+            asset.r2_key AS asset_r2_key,
+            (record.author_id = $2::uuid OR membership.role IN ('owner', 'admin')) AS can_edit
      FROM archeology_records record
+     JOIN archeology_project_memberships membership ON membership.project_id = record.project_id AND membership.user_id = $2::uuid
      JOIN archeology_users author ON author.id = record.author_id
      LEFT JOIN archeology_sites site ON site.id = record.site_id
      LEFT JOIN archeology_physical_objects object ON object.id = record.physical_object_id
@@ -187,7 +282,8 @@ export async function listCatalogRecords(projectId: string, userId: string): Pro
     assetFilename: row.asset_filename ? String(row.asset_filename) : null,
     assetMimeType: row.asset_mime_type ? String(row.asset_mime_type) : null,
     assetR2Key: row.asset_r2_key ? String(row.asset_r2_key) : null,
-    createdAt: new Date(row.created_at).toISOString()
+    createdAt: new Date(row.created_at).toISOString(),
+    canEdit: Boolean(row.can_edit)
   }));
 }
 
@@ -234,6 +330,71 @@ export async function createRecord(input: {
   return recordId;
 }
 
+export async function updateRecord(input: {
+  recordId: string;
+  actorId: string;
+  siteId?: string | null;
+  physicalObjectId?: string | null;
+  recordType: RecordType;
+  title?: string | null;
+  description?: string | null;
+  filterName?: string | null;
+  enhancement?: string | null;
+  additionalInformation?: string | null;
+  acquisitionAt: string;
+  visibility: Visibility;
+  status: RecordStatus;
+}) {
+  const access = await getDatabase().query(
+    `SELECT record.project_id, record.author_id, membership.role
+     FROM archeology_records record
+     JOIN archeology_project_memberships membership ON membership.project_id = record.project_id AND membership.user_id = $2::uuid
+     WHERE record.id = $1::uuid
+     LIMIT 1`,
+    [input.recordId, input.actorId]
+  );
+  const row = access.rows[0];
+  if (!row) throw new Error("Record not found.");
+  const canEdit = String(row.author_id) === input.actorId || ["owner", "admin"].includes(String(row.role));
+  if (!canEdit) throw new Error("You cannot edit this record.");
+
+  await getDatabase().query(
+    `UPDATE archeology_records
+     SET site_id = $1::uuid,
+         physical_object_id = $2::uuid,
+         record_type = $3,
+         title = $4,
+         description = $5,
+         filter_name = $6,
+         enhancement = $7,
+         additional_information = $8,
+         acquisition_at = $9::timestamptz,
+         visibility = $10,
+         status = $11,
+         updated_at = NOW()
+     WHERE id = $12::uuid`,
+    [
+      input.siteId || null,
+      input.physicalObjectId || null,
+      input.recordType,
+      input.title || null,
+      input.description || null,
+      input.filterName || null,
+      input.enhancement || null,
+      input.additionalInformation || null,
+      input.acquisitionAt,
+      input.visibility,
+      input.status,
+      input.recordId
+    ]
+  );
+  await writeAuditEvent(String(row.project_id), input.actorId, "record.updated", "record", input.recordId, {
+    recordType: input.recordType,
+    visibility: input.visibility,
+    status: input.status
+  });
+}
+
 export async function createDigitalAsset(input: {
   projectId: string;
   originalFilename: string;
@@ -272,6 +433,8 @@ export async function getRecordForUser(recordId: string, userId: string) {
             project.name AS project_name,
             site.name AS site_name,
             object.name AS object_name,
+            membership.role AS viewer_role,
+            (record.author_id = $2::uuid OR membership.role IN ('owner', 'admin')) AS can_edit,
             asset.id AS asset_id,
             asset.original_filename AS asset_filename,
             asset.mime_type AS asset_mime_type,
