@@ -4,22 +4,24 @@ Updated: 2026-08-14
 
 ## Phase 0: standalone foundation
 
-Status: **in implementation**
+Status: **complete and validated**
 
-Build:
+Implemented:
 
 - Next.js + TypeScript application
-- Docker/Coolify deployment
-- `/api/health`
-- PostgreSQL + PostGIS and migrations
-- central Hupla access
+- Docker/Coolify deployment at `https://archeology-notes.hupla.eu`
+- `/api/health` and deep dependency diagnostics
+- PostgreSQL + PostGIS 3.5 and migrations
+- central Hupla access behind Cloudflare Access
 - central Hupla usage/session tracking
 - private Cloudflare R2 connectivity
 - application shell and canonical documentation
 
-Gate 0 passes when a Hupla-authorised user can open the deployed application and deep health diagnostics confirm database and R2 connectivity.
+Gate 0 passed on 2026-08-14. A Hupla-authorised user can open the deployed application and `/api/health?deep=1` reports database, PostGIS, R2 and Hupla access as ready.
 
 ## Phase 1: real project, records and catalog
+
+Status: **in implementation**
 
 Implement:
 
@@ -34,14 +36,16 @@ Implement:
 - authorship
 - Private / Project / Public visibility
 - catalog desktop table and mobile cards
-- filtering
+- filtering and basic search
 - record detail
 - audit history
 - source/derivative relationships
 
-Use Casignana as the first project dataset.
+Casignana is the first project dataset.
 
-Gate 1: two authorised users can collaborate in one project without cross-user exposure of private records.
+The first implementation slice uses a deliberate pilot simplification: Hupla-authorised Archeology Notes users are automatically enrolled in Casignana. Explicit project invitations and role administration will replace this bootstrap after the first multi-user test.
+
+Gate 1: two authorised users can collaborate in one project without cross-user exposure of private records. Original photo/document uploads must persist in private R2 and retain author, acquisition date and source provenance.
 
 ## Phase 2: field prototype
 
