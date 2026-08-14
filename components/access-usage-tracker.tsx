@@ -7,10 +7,11 @@ const ACTIVE_WINDOW_MS = 5 * 60_000;
 
 export default function AccessUsageTracker() {
   const sessionId = useRef<string>("");
-  const lastInteractionAt = useRef<number>(Date.now());
+  const lastInteractionAt = useRef<number>(0);
 
   useEffect(() => {
     sessionId.current = crypto.randomUUID();
+    lastInteractionAt.current = Date.now();
     const endpoint = "/api/hupla-access/session";
 
     const post = (action: "start" | "heartbeat" | "end", useBeacon = false) => {
