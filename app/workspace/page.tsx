@@ -24,6 +24,7 @@ export default async function WorkspacePage({ searchParams }: { searchParams: Pr
     listObjectsForProject(selectedProject.id)
   ]);
   const annotations = await listSpatialAnnotations(selectedProject.id, user.localUserId);
+  const viewerKey = `${selectedProject.id}:${representations.map((item) => `${item.id}:${item.webAssetId || "none"}:${item.sourceAssetId || "none"}`).join("|")}:${annotations.length}`;
 
   return (
     <AppShell user={user} active="3D Workspace">
@@ -42,7 +43,8 @@ export default async function WorkspacePage({ searchParams }: { searchParams: Pr
       </header>
 
       <WorkspaceViewer
-        project={{ id: selectedProject.id, slug: selectedProject.slug, name: selectedProject.name }}
+        key={viewerKey}
+        project={{ id: selectedProject.id, slug: selectedProject.slug, name: selectedProject.name, role: selectedProject.role }}
         representations={representations}
         annotations={annotations}
         sites={sites.map((site) => ({ id: String(site.id), code: site.code ? String(site.code) : null, name: String(site.name) }))}
