@@ -22,9 +22,12 @@ export async function transcribeAudio(input: { bytes: Uint8Array; filename: stri
     throw new Error("Transcription is not configured.");
   }
 
+  const arrayBuffer = new ArrayBuffer(input.bytes.byteLength);
+  new Uint8Array(arrayBuffer).set(input.bytes);
+
   const body = new FormData();
   body.append("model", config.model);
-  body.append("file", new File([input.bytes], input.filename, { type: input.mimeType || "application/octet-stream" }));
+  body.append("file", new File([arrayBuffer], input.filename, { type: input.mimeType || "application/octet-stream" }));
 
   const response = await fetch(`${config.baseUrl}/audio/transcriptions`, {
     method: "POST",
