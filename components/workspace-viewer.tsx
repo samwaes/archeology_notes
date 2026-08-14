@@ -77,8 +77,8 @@ export default function WorkspaceViewer({ project, representations, annotations,
 }) {
   const router = useRouter();
   const representationMap = useMemo(() => new Map(representations.map((item) => [item.id, item])), [representations]);
-  const focusAnnotation = useMemo(() => annotations.find((item) => item.recordId === focusRecordId) || null, [annotations, focusRecordId]);
-  const initialActiveId = focusAnnotation?.representationId || representations.find((item) => item.isPrimary)?.id || representations[0]?.id || null;
+  const focusedRecordAnnotation = useMemo(() => annotations.find((item) => item.recordId === focusRecordId) || null, [annotations, focusRecordId]);
+  const initialActiveId = focusedRecordAnnotation?.representationId || representations.find((item) => item.isPrimary)?.id || representations[0]?.id || null;
 
   const mountRef = useRef<HTMLDivElement | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
@@ -87,6 +87,7 @@ export default function WorkspaceViewer({ project, representations, annotations,
   const unionBoundsRef = useRef<THREE.Box3>(new THREE.Box3());
   const pinsRef = useRef<Record<string, HTMLButtonElement | null>>({});
   const pendingPinRef = useRef<HTMLButtonElement | null>(null);
+  const pendingPointRef = useRef<PendingPoint | null>(null);
   const annotateRef = useRef(false);
   const activeRepresentationRef = useRef<string | null>(initialActiveId);
   const modeRef = useRef<ViewMode>("photo");
@@ -104,7 +105,7 @@ export default function WorkspaceViewer({ project, representations, annotations,
   const [loadingLayers, setLoadingLayers] = useState(() => representations.filter((item) => item.webAssetId).length);
   const [annotate, setAnnotate] = useState(false);
   const [pendingPoint, setPendingPoint] = useState<PendingPoint | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(() => focusAnnotation?.id || annotations[0]?.id || null);
+  const [selectedId, setSelectedId] = useState<string | null>(() => focusedRecordAnnotation?.id || annotations[0]?.id || null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [recordVisibility, setRecordVisibility] = useState("project");
@@ -153,6 +154,10 @@ export default function WorkspaceViewer({ project, representations, annotations,
   }, [activeRepresentationId]);
 
   useEffect(() => {
+    pendingPointRef.current = pendingPoint;
+  }, [pendingPoint]);
+
+  useEffect(() => {
     modeRef.current = mode;
     visibilityRef.current = visibility;
     opacityRef.current = opacity;
@@ -165,6 +170,13 @@ export default function WorkspaceViewer({ project, representations, annotations,
     let active = true;
     let frame = 0;
     const abortController = new AbortController();
+    const runtimeMap = runtimeRef.current;
+    runtimeMap.clear();
+    unionBoundsRef.current = new THREE.Box3();
+    setLoadingLayers(representations.filter((item) => item.webAssetId).length);
+    setLayerErrors({});
+    setLayerStats({});
+
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x101713);
     scene.fog = new THREE.FogExp2(0x101713, 0.009);
@@ -231,13 +243,13 @@ export default function WorkspaceViewer({ project, representations, annotations,
         runtime.dispose();
         return;
       }
-      runtimeRef.current.set(runtime.representation.id, runtime);
+      runtimeMap.set(runtime.representation.id, runtime);
       scene.add(runtime.root);
       unionBoundsRef.current.union(runtime.bounds);
       setLayerStats((current) => ({ ...current, [runtime.representation.id]: stats }));
       setLoadingLayers((count) => Math.max(0, count - 1));
       applyAppearance();
-      if (runtimeRef.current.size === 1 && !focusAnnotation) fitBounds(unionBoundsRef.current);
+      if (runtimeMap.size === 1 && !focusedRecordAnnotation) fitBounds(unionBoundsRef.current);
     };
 
     const failRuntime = (representation: WorkspaceRepresentation, error: unknown) => {
@@ -360,9 +372,9 @@ export default function WorkspaceViewer({ project, representations, annotations,
 
     void Promise.all(representations.filter((item) => item.webAssetId).map((representation) => pointCloudFormat(representation) ? loadCopc(representation) : loadMesh(representation))).then(() => {
       if (!active) return;
-      if (!focusAnnotation && !unionBoundsRef.current.isEmpty()) fitBounds(unionBoundsRef.current);
-      if (focusAnnotation) {
-        const point = transformedAnnotationPoint(focusAnnotation, representationMap);
+      if (!focusedRecordAnnotation && !unionBoundsRef.current.isEmpty()) fitBounds(unionBoundsRef.current);
+      if (focusedRecordAnnotation) {
+        const point = transformedAnnotationPoint(focusedRecordAnnotation, representationMap);
         controls.target.copy(point);
         const radius = Math.max(1, unionBoundsRef.current.isEmpty() ? 4 : unionBoundsRef.current.getSize(new THREE.Vector3()).length() * 0.08);
         camera.position.copy(point.clone().add(new THREE.Vector3(radius, radius * 0.75, radius)));
@@ -378,7 +390,7 @@ export default function WorkspaceViewer({ project, representations, annotations,
       if (!annotateRef.current) return;
       const representationId = activeRepresentationRef.current;
       if (!representationId) return;
-      const runtime = runtimeRef.current.get(representationId);
+      const runtime = runtimeMap.get(representationId);
       if (!runtime?.raycastTargets.length) return;
       const rect = renderer.domElement.getBoundingClientRect();
       pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
@@ -387,8 +399,9 @@ export default function WorkspaceViewer({ project, representations, annotations,
       const hit = raycaster.intersectObjects(runtime.raycastTargets, false)[0];
       if (!hit) return;
       const local = runtime.root.worldToLocal(hit.point.clone());
-      const value: [number, number, number] = [local.x, local.y, local.z];
-      setPendingPoint({ representationId, point: value });
+      const value: PendingPoint = { representationId, point: [local.x, local.y, local.z] };
+      pendingPointRef.current = value;
+      setPendingPoint(value);
       setSelectedId(null);
       setSaveError("");
     };
@@ -410,9 +423,10 @@ export default function WorkspaceViewer({ project, representations, annotations,
         element.style.top = `${(-vector.y * 0.5 + 0.5) * rect.height}px`;
         element.style.display = vector.z > -1 && vector.z < 1 ? "block" : "none";
       }
-      if (pendingPoint && pendingPinRef.current) {
-        const representation = representationMap.get(pendingPoint.representationId);
-        const vector = new THREE.Vector3(...pendingPoint.point);
+      const pending = pendingPointRef.current;
+      if (pending && pendingPinRef.current) {
+        const representation = representationMap.get(pending.representationId);
+        const vector = new THREE.Vector3(...pending.point);
         if (representation) vector.applyMatrix4(matrixFor(representation));
         vector.project(camera);
         pendingPinRef.current.style.left = `${(vector.x * 0.5 + 0.5) * rect.width}px`;
@@ -430,15 +444,15 @@ export default function WorkspaceViewer({ project, representations, annotations,
       observer.disconnect();
       renderer.domElement.removeEventListener("click", handleClick);
       controls.dispose();
-      for (const runtime of runtimeRef.current.values()) runtime.dispose();
-      runtimeRef.current.clear();
+      for (const runtime of runtimeMap.values()) runtime.dispose();
+      runtimeMap.clear();
       unionBoundsRef.current = new THREE.Box3();
       renderer.dispose();
       if (renderer.domElement.parentNode === mount) mount.removeChild(renderer.domElement);
       cameraRef.current = null;
       controlsRef.current = null;
     };
-  }, [annotations, focusAnnotation, lodDepth, pointBudget, representationMap, representations]);
+  }, [annotations, focusedRecordAnnotation, lodDepth, pointBudget, representationMap, representations]);
 
   function setCameraPreset(preset: CameraPreset) {
     const camera = cameraRef.current;
@@ -470,6 +484,7 @@ export default function WorkspaceViewer({ project, representations, annotations,
   function chooseRepresentation(representation: WorkspaceRepresentation) {
     setActiveRepresentationId(representation.id);
     activeRepresentationRef.current = representation.id;
+    pendingPointRef.current = null;
     setPendingPoint(null);
     setSelectedId(null);
     setSaveError("");
@@ -477,9 +492,13 @@ export default function WorkspaceViewer({ project, representations, annotations,
 
   function focusAnnotation(annotation: SpatialAnnotation) {
     setSelectedId(annotation.id);
+    pendingPointRef.current = null;
     setPendingPoint(null);
     const representation = representationMap.get(annotation.representationId);
-    if (representation) chooseRepresentation(representation);
+    if (representation) {
+      setActiveRepresentationId(representation.id);
+      activeRepresentationRef.current = representation.id;
+    }
     const camera = cameraRef.current;
     const controls = controlsRef.current;
     if (!camera || !controls) return;
@@ -516,6 +535,7 @@ export default function WorkspaceViewer({ project, representations, annotations,
       if (!response.ok) throw new Error(payload.error || "Could not save the spatial observation.");
       setTitle("");
       setDescription("");
+      pendingPointRef.current = null;
       setPendingPoint(null);
       setAnnotate(false);
       router.refresh();
@@ -536,7 +556,7 @@ export default function WorkspaceViewer({ project, representations, annotations,
       <div className={styles.toolbar}>
         <div className={styles.toolbarGroup}><button className={mode === "photo" ? styles.active : ""} onClick={() => setMode("photo")}><Camera size={14} /> Photo</button><button className={mode === "points" ? styles.active : ""} onClick={() => setMode("points")}><ScanLine size={14} /> Points</button><button className={mode === "hybrid" ? styles.active : ""} onClick={() => setMode("hybrid")}><Layers3 size={14} /> Hybrid</button></div>
         <div className={styles.toolbarGroup}><button onClick={() => setCameraPreset("overview")}><Eye size={14} /> Overview</button><button onClick={() => setCameraPreset("top")}>Top</button>{project.slug === "casignana" ? <><button onClick={() => setCameraPreset("apse")}>Apse</button><button onClick={() => setCameraPreset("floor")}>Floor</button><button onClick={() => setCameraPreset("wall")}>Wall</button></> : null}</div>
-        <div className={styles.toolbarGroup}><button className={annotate ? styles.annotate : ""} disabled={!activeRepresentation?.webAssetId} onClick={() => { setAnnotate((value) => !value); setPendingPoint(null); }}><Crosshair size={14} /> {annotate ? "Cancel annotation" : "Annotate active layer"}</button></div>
+        <div className={styles.toolbarGroup}><button className={annotate ? styles.annotate : ""} disabled={!activeRepresentation?.webAssetId} onClick={() => { setAnnotate((value) => !value); pendingPointRef.current = null; setPendingPoint(null); }}><Crosshair size={14} /> {annotate ? "Cancel annotation" : "Annotate active layer"}</button></div>
       </div>
 
       <div className={styles.lodControls}><SlidersHorizontal size={14} /><label>Point budget<select value={pointBudget} onChange={(event) => setPointBudget(Number(event.target.value))}><option value={100000}>100k</option><option value={250000}>250k</option><option value={500000}>500k</option><option value={1000000}>1M</option></select></label><label>Octree depth<select value={lodDepth} onChange={(event) => setLodDepth(Number(event.target.value))}><option value={3}>3</option><option value={4}>4</option><option value={5}>5</option><option value={6}>6</option><option value={7}>7</option></select></label></div>
