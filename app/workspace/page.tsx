@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Box, ChevronDown, Database, MapPin } from "lucide-react";
+import { Box, Database, MapPin } from "lucide-react";
 import AppShell from "@/components/app-shell";
 import WorkspaceViewer from "@/components/workspace-viewer";
 import { requireCurrentUser } from "@/lib/current-user";
@@ -29,7 +29,7 @@ export default async function WorkspacePage({ searchParams }: { searchParams: Pr
           <p>Navigate the real survey, switch representation views, and attach normal Catalog records directly to XYZ positions on the physical scene.</p>
         </div>
         <div className="workspace-project-switcher">
-          <label htmlFor="workspace-project"><Box size={15} /> Project</label>
+          <span><Box size={15} /> Project</span>
           <div className="workspace-project-links">
             {projects.map((project) => <Link key={project.slug} className={project.slug === selectedSlug ? "active" : ""} href={`/workspace?project=${encodeURIComponent(project.slug)}`}>{project.name}</Link>)}
           </div>
