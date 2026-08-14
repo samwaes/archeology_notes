@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "./phase1.css";
 
 export const metadata: Metadata = {
   title: "Archeology Notes | Hupla Labs",
