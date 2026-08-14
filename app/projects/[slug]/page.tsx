@@ -116,7 +116,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
 
       <section className="content-panel recent-records">
         <div className="panel-heading"><div><p className="eyebrow">Recent evidence</p><h2>Latest records</h2></div><Link href={catalogHref}>View catalog <ArrowRight size={14} /></Link></div>
-        {records.length ? <div className="record-strip">{records.slice(0, 6).map((record) => <Link href={`/records/${record.id}`} key={record.id}><span>{record.recordType}</span><strong>{record.title || record.description || "Untitled record"}</strong><small>{new Date(record.acquisitionAt).toLocaleDateString("en-GB")} · {record.authorName || record.authorEmail}</small></Link>)}</div> : <div className="empty-state"><h3>No records yet</h3><p>Open this project's catalog to add the first note, photograph or document.</p></div>}
+        {records.length ? <div className="record-strip">{records.slice(0, 6).map((record) => <Link href={`/records/${record.id}`} key={record.id}><span>{record.recordType}</span><strong>{record.title || record.description || "Untitled record"}</strong><small>{new Date(record.acquisitionAt).toLocaleDateString("en-GB")} · {record.authorName || record.authorEmail}</small></Link>)}</div> : <div className="empty-state"><h3>No records yet</h3><p>Open the project catalog to add the first note, photograph or document.</p></div>}
       </section>
     </AppShell>
   );
