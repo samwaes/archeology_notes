@@ -34,7 +34,6 @@ export default function FieldCapture({ projects, transcriptionConfigured }: { pr
   const [measurementUnit, setMeasurementUnit] = useState("");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
-  const [audioUrl, setAudioUrl] = useState("");
   const [recording, setRecording] = useState(false);
   const [locationEnabled, setLocationEnabled] = useState(true);
   const [location, setLocation] = useState<LocationFix | null>(null);
@@ -51,47 +50,34 @@ export default function FieldCapture({ projects, transcriptionConfigured }: { pr
 
   const project = useMemo(() => projects.find((item) => item.slug === projectSlug) || projects[0], [projectSlug, projects]);
   const sites = project?.sites || [];
-  const objects = useMemo(() => (project?.objects || []).filter((item) => !siteId || item.siteId === siteId), [project, siteId]);
+  const validSiteId = siteId && sites.some((item) => item.id === siteId) ? siteId : "";
+  const objects = useMemo(() => (project?.objects || []).filter((item) => !validSiteId || item.siteId === validSiteId), [project, validSiteId]);
+  const validObjectId = objectId && objects.some((item) => item.id === objectId) ? objectId : "";
 
   useEffect(() => {
-    try {
-      const stored = window.localStorage.getItem(CONTEXT_KEY);
-      if (!stored) return;
-      const context = JSON.parse(stored) as { projectSlug?: string; siteId?: string; objectId?: string; visibility?: string };
-      if (context.projectSlug && projects.some((item) => item.slug === context.projectSlug)) setProjectSlug(context.projectSlug);
-      if (context.siteId) setSiteId(context.siteId);
-      if (context.objectId) setObjectId(context.objectId);
-      if (context.visibility && ["private", "project", "public"].includes(context.visibility)) setVisibility(context.visibility);
-    } catch {
-      // Invalid local field context is ignored.
-    }
+    const timer = window.setTimeout(() => {
+      try {
+        const stored = window.localStorage.getItem(CONTEXT_KEY);
+        if (!stored) return;
+        const context = JSON.parse(stored) as { projectSlug?: string; siteId?: string; objectId?: string; visibility?: string };
+        const storedProject = context.projectSlug ? projects.find((item) => item.slug === context.projectSlug) : null;
+        if (!storedProject) return;
+        const storedSiteId = context.siteId && storedProject.sites.some((item) => item.id === context.siteId) ? context.siteId : "";
+        const storedObjectId = context.objectId && storedProject.objects.some((item) => item.id === context.objectId && (!storedSiteId || item.siteId === storedSiteId)) ? context.objectId : "";
+        setProjectSlug(storedProject.slug);
+        setSiteId(storedSiteId);
+        setObjectId(storedObjectId);
+        if (context.visibility && ["private", "project", "public"].includes(context.visibility)) setVisibility(context.visibility);
+      } catch {
+        // Invalid local field context is ignored.
+      }
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [projects]);
 
   useEffect(() => {
-    window.localStorage.setItem(CONTEXT_KEY, JSON.stringify({ projectSlug, siteId, objectId, visibility }));
-  }, [projectSlug, siteId, objectId, visibility]);
-
-  useEffect(() => {
-    if (!project) return;
-    if (siteId && !project.sites.some((item) => item.id === siteId)) {
-      setSiteId(project.sites[0]?.id || "");
-      setObjectId("");
-    }
-  }, [project, siteId]);
-
-  useEffect(() => {
-    if (objectId && !objects.some((item) => item.id === objectId)) setObjectId("");
-  }, [objectId, objects]);
-
-  useEffect(() => {
-    if (!audioBlob) {
-      setAudioUrl("");
-      return;
-    }
-    const url = URL.createObjectURL(audioBlob);
-    setAudioUrl(url);
-    return () => URL.revokeObjectURL(url);
-  }, [audioBlob]);
+    window.localStorage.setItem(CONTEXT_KEY, JSON.stringify({ projectSlug, siteId: validSiteId, objectId: validObjectId, visibility }));
+  }, [projectSlug, validSiteId, validObjectId, visibility]);
 
   useEffect(() => () => {
     streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -195,8 +181,8 @@ export default function FieldCapture({ projects, transcriptionConfigured }: { pr
       const fix = location || await readLocation();
       const data = new FormData();
       data.append("projectSlug", project.slug);
-      data.append("siteId", siteId);
-      data.append("physicalObjectId", objectId);
+      data.append("siteId", validSiteId);
+      data.append("physicalObjectId", validObjectId);
       data.append("recordType", mode);
       data.append("visibility", visibility);
       data.append("title", title);
@@ -247,8 +233,8 @@ export default function FieldCapture({ projects, transcriptionConfigured }: { pr
         </div>
         <div className={styles.contextGrid}>
           <label><span>Project</span><select value={projectSlug} onChange={(event) => { setProjectSlug(event.target.value); setSiteId(""); setObjectId(""); }}>{projects.map((item) => <option key={item.slug} value={item.slug}>{item.name}</option>)}</select></label>
-          <label><span>Site</span><select value={siteId} onChange={(event) => { setSiteId(event.target.value); setObjectId(""); }}><option value="">Link later</option>{sites.map((site) => <option value={site.id} key={site.id}>{site.name}</option>)}</select></label>
-          <label><span>Object / area</span><select value={objectId} onChange={(event) => setObjectId(event.target.value)}><option value="">Link later</option>{objects.map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</select></label>
+          <label><span>Site</span><select value={validSiteId} onChange={(event) => { setSiteId(event.target.value); setObjectId(""); }}><option value="">Link later</option>{sites.map((site) => <option value={site.id} key={site.id}>{site.name}</option>)}</select></label>
+          <label><span>Object / area</span><select value={validObjectId} onChange={(event) => setObjectId(event.target.value)}><option value="">Link later</option>{objects.map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</select></label>
           <label><span>Visibility</span><select value={visibility} onChange={(event) => setVisibility(event.target.value)}><option value="private">Private</option><option value="project">Project</option><option value="public">Public</option></select></label>
         </div>
         <div className={styles.locationRow}>
@@ -273,7 +259,7 @@ export default function FieldCapture({ projects, transcriptionConfigured }: { pr
 
           {mode === "photo" ? <div className={styles.fileState}><FileImage size={22} /><div><strong>{photoFile?.name || "No photograph selected"}</strong><span>{photoFile ? `${Math.round(photoFile.size / 1024)} KB` : "Take a photo or choose one from the device."}</span></div><button type="button" onClick={() => libraryInput.current?.click()}>Choose existing</button></div> : null}
 
-          {mode === "voice" ? <div className={styles.voiceState}>{recording ? <><span className={styles.recordingDot} /><strong>Recording...</strong><button type="button" onClick={stopRecording}>Stop recording</button></> : audioUrl ? <><audio controls src={audioUrl} /><button type="button" onClick={() => void startRecording()}>Record again</button></> : <><Mic size={22} /><span>Tap Voice above to start recording.</span></>}</div> : null}
+          {mode === "voice" ? <div className={styles.voiceState}>{recording ? <><span className={styles.recordingDot} /><strong>Recording...</strong><button type="button" onClick={stopRecording}>Stop recording</button></> : audioBlob ? <><Mic size={22} /><div><strong>Voice note ready</strong><span>{Math.max(1, Math.round(audioBlob.size / 1024))} KB · {audioBlob.type || "audio"}</span></div><button type="button" onClick={() => void startRecording()}>Record again</button></> : <><Mic size={22} /><span>Tap Voice above to start recording.</span></>}</div> : null}
 
           {mode === "measurement" ? <div className={styles.measurementRow}><label><span>Value</span><input inputMode="decimal" value={measurementValue} onChange={(event) => setMeasurementValue(event.target.value)} placeholder="12.4" /></label><label><span>Unit</span><input value={measurementUnit} onChange={(event) => setMeasurementUnit(event.target.value)} placeholder="mm, cm, °C..." /></label></div> : null}
 
