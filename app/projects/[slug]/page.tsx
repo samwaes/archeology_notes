@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { ArrowRight, Box, Database, MapPinned, Plus, Settings2, Users } from "lucide-react";
+import { AlertTriangle, ArrowRight, Box, Database, MapPinned, Plus, Settings2, Users } from "lucide-react";
 import { notFound } from "next/navigation";
 import AppShell from "@/components/app-shell";
 import { requireCurrentUser } from "@/lib/current-user";
-import { getProjectForUser, listCatalogRecords, listObjectsForProject, listProjectMembers, listSitesForProject } from "@/lib/records";
+import { listProjectMembers } from "@/lib/project-members";
+import { getProjectForUser, listCatalogRecords, listObjectsForProject, listSitesForProject } from "@/lib/records";
 import { createPhysicalObjectAction, createSiteAction, updateProjectAction } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -14,12 +15,27 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
   const project = await getProjectForUser(slug, user.localUserId);
   if (!project) notFound();
 
-  const [sites, objects, records, members] = await Promise.all([
-    listSitesForProject(String(project.id)),
-    listObjectsForProject(String(project.id)),
-    listCatalogRecords(String(project.id), user.localUserId),
-    listProjectMembers(String(project.id))
+  const projectId = String(project.id);
+  const results = await Promise.allSettled([
+    listSitesForProject(projectId),
+    listObjectsForProject(projectId),
+    listCatalogRecords(projectId, user.localUserId),
+    listProjectMembers(projectId)
   ]);
+
+  const labels = ["sites", "objects", "records", "members"] as const;
+  results.forEach((result, index) => {
+    if (result.status === "rejected") {
+      console.error(`[Archeology Notes] project ${slug}: ${labels[index]} query failed`, result.reason);
+    }
+  });
+
+  const sites = results[0].status === "fulfilled" ? results[0].value : [];
+  const objects = results[1].status === "fulfilled" ? results[1].value : [];
+  const records = results[2].status === "fulfilled" ? results[2].value : [];
+  const members = results[3].status === "fulfilled" ? results[3].value : [];
+  const unavailable = labels.filter((_, index) => results[index].status === "rejected");
+
   const canManage = ["owner", "admin"].includes(String(project.role));
   const catalogHref = `/catalog?project=${encodeURIComponent(slug)}`;
 
@@ -29,6 +45,13 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
         <div><p className="eyebrow">Project · {String(project.role)}</p><h1>{String(project.name)}</h1><p>{project.description ? String(project.description) : "No description yet."}</p></div>
         <Link className="primary-button" href={catalogHref}><Database size={16} /> Open catalog</Link>
       </header>
+
+      {unavailable.length ? (
+        <section className="runtime-warning">
+          <AlertTriangle size={18} />
+          <div><strong>Part of this project could not be loaded.</strong><p>Unavailable now: {unavailable.join(", ")}. The rest of the project remains usable and the detailed error is recorded in the application log.</p></div>
+        </section>
+      ) : null}
 
       <section className="project-summary-grid">
         <article><MapPinned size={20} /><strong>{sites.length}</strong><span>Sites</span></article>
@@ -86,14 +109,14 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
 
         <aside className="content-panel team-panel">
           <div className="panel-heading"><div><p className="eyebrow">Collaboration</p><h2>People</h2></div></div>
-          <div className="member-list">{members.map((member) => <div key={String(member.id)}><span className="member-avatar">{String(member.display_name || member.email).slice(0, 1).toUpperCase()}</span><span><strong>{String(member.display_name || member.email)}</strong><small>{String(member.role)}</small></span></div>)}</div>
+          {members.length ? <div className="member-list">{members.map((member) => <div key={String(member.id)}><span className="member-avatar">{String(member.display_name || member.email).slice(0, 1).toUpperCase()}</span><span><strong>{String(member.display_name || member.email)}</strong><small>{String(member.role)}</small></span></div>)}</div> : <p className="small-note">Membership information is temporarily unavailable.</p>}
           <p className="small-note">Hupla provides identity and application access. Project membership controls collaboration inside Archeology Notes.</p>
         </aside>
       </div>
 
       <section className="content-panel recent-records">
         <div className="panel-heading"><div><p className="eyebrow">Recent evidence</p><h2>Latest records</h2></div><Link href={catalogHref}>View catalog <ArrowRight size={14} /></Link></div>
-        <div className="record-strip">{records.slice(0, 6).map((record) => <Link href={`/records/${record.id}`} key={record.id}><span>{record.recordType}</span><strong>{record.title || record.description || "Untitled record"}</strong><small>{new Date(record.acquisitionAt).toLocaleDateString("en-GB")} · {record.authorName || record.authorEmail}</small></Link>)}</div>
+        {records.length ? <div className="record-strip">{records.slice(0, 6).map((record) => <Link href={`/records/${record.id}`} key={record.id}><span>{record.recordType}</span><strong>{record.title || record.description || "Untitled record"}</strong><small>{new Date(record.acquisitionAt).toLocaleDateString("en-GB")} · {record.authorName || record.authorEmail}</small></Link>)}</div> : <div className="empty-state"><h3>No records yet</h3><p>Open the project catalog to add the first note, photograph or document.</p></div>}
       </section>
     </AppShell>
   );
