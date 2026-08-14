@@ -21,12 +21,13 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
     listProjectMembers(String(project.id))
   ]);
   const canManage = ["owner", "admin"].includes(String(project.role));
+  const catalogHref = `/catalog?project=${encodeURIComponent(slug)}`;
 
   return (
     <AppShell user={user} active="Projects">
       <header className="workspace-header project-hero">
         <div><p className="eyebrow">Project · {String(project.role)}</p><h1>{String(project.name)}</h1><p>{project.description ? String(project.description) : "No description yet."}</p></div>
-        <Link className="primary-button" href="/catalog"><Database size={16} /> Open catalog</Link>
+        <Link className="primary-button" href={catalogHref}><Database size={16} /> Open catalog</Link>
       </header>
 
       <section className="project-summary-grid">
@@ -91,7 +92,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
       </div>
 
       <section className="content-panel recent-records">
-        <div className="panel-heading"><div><p className="eyebrow">Recent evidence</p><h2>Latest records</h2></div><Link href="/catalog">View catalog <ArrowRight size={14} /></Link></div>
+        <div className="panel-heading"><div><p className="eyebrow">Recent evidence</p><h2>Latest records</h2></div><Link href={catalogHref}>View catalog <ArrowRight size={14} /></Link></div>
         <div className="record-strip">{records.slice(0, 6).map((record) => <Link href={`/records/${record.id}`} key={record.id}><span>{record.recordType}</span><strong>{record.title || record.description || "Untitled record"}</strong><small>{new Date(record.acquisitionAt).toLocaleDateString("en-GB")} · {record.authorName || record.authorEmail}</small></Link>)}</div>
       </section>
     </AppShell>
