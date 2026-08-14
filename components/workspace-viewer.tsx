@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Box, Camera, Crosshair, Eye, Focus, Layers3, MapPin, ScanLine, Upload } from "lucide-react";
+import { Box, Camera, Crosshair, Eye, Layers3, MapPin, ScanLine, Upload } from "lucide-react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
@@ -19,11 +19,7 @@ function bytesLabel(value: number | null) {
   return `${Math.round(value / 1024)} KB`;
 }
 
-export default function WorkspaceViewer({
-  representation,
-  annotations,
-  focusRecordId
-}: {
+export default function WorkspaceViewer({ representation, annotations, focusRecordId }: {
   representation: WorkspaceRepresentation;
   annotations: SpatialAnnotation[];
   focusRecordId?: string | null;
@@ -37,7 +33,9 @@ export default function WorkspaceViewer({
   const raycastMeshesRef = useRef<THREE.Mesh[]>([]);
   const pinsRef = useRef<Record<string, HTMLButtonElement | null>>({});
   const pendingPinRef = useRef<HTMLButtonElement | null>(null);
+  const pendingPointRef = useRef<[number, number, number] | null>(null);
   const annotateRef = useRef(false);
+
   const [mode, setMode] = useState<ViewMode>("photo");
   const [annotate, setAnnotate] = useState(false);
   const [pendingPoint, setPendingPoint] = useState<[number, number, number] | null>(null);
@@ -58,6 +56,7 @@ export default function WorkspaceViewer({
   const modelUrl = representation.webAssetId ? `/api/workspace/model/${representation.id}` : null;
 
   useEffect(() => { annotateRef.current = annotate; }, [annotate]);
+  useEffect(() => { pendingPointRef.current = pendingPoint; }, [pendingPoint]);
 
   useEffect(() => {
     const root = meshRootRef.current;
@@ -106,7 +105,6 @@ export default function WorkspaceViewer({
     const fill = new THREE.DirectionalLight(0xd8e8df, 0.7);
     fill.position.set(-12, 7, -8);
     scene.add(fill);
-
     const grid = new THREE.GridHelper(34, 34, 0x516259, 0x27362f);
     grid.position.y = -3.08;
     scene.add(grid);
@@ -121,14 +119,6 @@ export default function WorkspaceViewer({
     const observer = new ResizeObserver(resize);
     observer.observe(mount);
 
-    const focusPoint = (point: THREE.Vector3, distance = 5.5) => {
-      const direction = new THREE.Vector3(1, 0.7, 1).normalize();
-      controls.target.copy(point);
-      camera.position.copy(point.clone().add(direction.multiplyScalar(distance)));
-      camera.lookAt(point);
-      controls.update();
-    };
-
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2();
     const handleClick = (event: MouseEvent) => {
@@ -139,74 +129,75 @@ export default function WorkspaceViewer({
       raycaster.setFromCamera(pointer, camera);
       const hit = raycaster.intersectObjects(raycastMeshesRef.current, false)[0];
       if (!hit) return;
-      setPendingPoint([hit.point.x, hit.point.y, hit.point.z]);
+      const value: [number, number, number] = [hit.point.x, hit.point.y, hit.point.z];
+      pendingPointRef.current = value;
+      setPendingPoint(value);
       setSelectedId(null);
       setSaveError("");
     };
     renderer.domElement.addEventListener("click", handleClick);
 
     const loader = new GLTFLoader();
-    loader.load(
-      modelUrl,
-      (gltf) => {
-        if (!active) return;
-        const root = gltf.scene;
-        root.name = "Casignana photographic model";
-        scene.add(root);
-        meshRootRef.current = root;
-        const raycastMeshes: THREE.Mesh[] = [];
-        const pointGroup = new THREE.Group();
-        pointGroup.name = "Dense vertices";
-        let vertices = 0;
-        let meshCount = 0;
-        root.updateWorldMatrix(true, true);
-        root.traverse((object) => {
-          if (!(object instanceof THREE.Mesh)) return;
-          meshCount += 1;
-          raycastMeshes.push(object);
-          const source = object.geometry.getAttribute("position");
-          if (!source) return;
-          vertices += source.count;
-          const geometry = new THREE.BufferGeometry();
-          const positions = new Float32Array(source.count * 3);
-          const point = new THREE.Vector3();
-          for (let index = 0; index < source.count; index += 1) {
-            point.fromBufferAttribute(source, index).applyMatrix4(object.matrixWorld);
-            positions[index * 3] = point.x;
-            positions[index * 3 + 1] = point.y;
-            positions[index * 3 + 2] = point.z;
-          }
-          geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-          const material = new THREE.PointsMaterial({ color: 0xe9ddbf, size: 0.045, sizeAttenuation: true, transparent: true, opacity: 0.92 });
-          pointGroup.add(new THREE.Points(geometry, material));
-        });
-        raycastMeshesRef.current = raycastMeshes;
-        scene.add(pointGroup);
-        pointsRootRef.current = pointGroup;
-        pointGroup.visible = false;
+    loader.load(modelUrl, (gltf) => {
+      if (!active) return;
+      const root = gltf.scene;
+      root.name = "Casignana photographic model";
+      scene.add(root);
+      meshRootRef.current = root;
+      const pointGroup = new THREE.Group();
+      const raycastMeshes: THREE.Mesh[] = [];
+      let vertices = 0;
+      let meshCount = 0;
+      root.updateWorldMatrix(true, true);
+      root.traverse((object) => {
+        if (!(object instanceof THREE.Mesh)) return;
+        meshCount += 1;
+        raycastMeshes.push(object);
+        const source = object.geometry.getAttribute("position");
+        if (!source) return;
+        vertices += source.count;
+        const positions = new Float32Array(source.count * 3);
+        const point = new THREE.Vector3();
+        for (let index = 0; index < source.count; index += 1) {
+          point.fromBufferAttribute(source, index).applyMatrix4(object.matrixWorld);
+          positions[index * 3] = point.x;
+          positions[index * 3 + 1] = point.y;
+          positions[index * 3 + 2] = point.z;
+        }
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+        pointGroup.add(new THREE.Points(geometry, new THREE.PointsMaterial({ color: 0xe9ddbf, size: 0.045, sizeAttenuation: true, transparent: true, opacity: 0.92 })));
+      });
+      raycastMeshesRef.current = raycastMeshes;
+      scene.add(pointGroup);
+      pointsRootRef.current = pointGroup;
+      pointGroup.visible = false;
 
-        const bounds = new THREE.Box3().setFromObject(root);
-        const center = bounds.getCenter(new THREE.Vector3());
-        const size = bounds.getSize(new THREE.Vector3());
-        const radius = Math.max(size.x, size.y, size.z);
-        controls.target.copy(center);
-        camera.position.copy(center.clone().add(new THREE.Vector3(radius * 0.9, radius * 0.55, radius * 0.95)));
-        camera.lookAt(center);
+      const bounds = new THREE.Box3().setFromObject(root);
+      const center = bounds.getCenter(new THREE.Vector3());
+      const size = bounds.getSize(new THREE.Vector3());
+      const radius = Math.max(size.x, size.y, size.z);
+      controls.target.copy(center);
+      camera.position.copy(center.clone().add(new THREE.Vector3(radius * 0.9, radius * 0.55, radius * 0.95)));
+      camera.lookAt(center);
+      controls.update();
+      setModelStats({ meshes: meshCount, vertices });
+      setLoading(false);
+
+      const focus = focusRecordId ? annotations.find((item) => item.recordId === focusRecordId) : null;
+      if (focus) {
+        const point = new THREE.Vector3(focus.x, focus.y, focus.z);
+        controls.target.copy(point);
+        camera.position.copy(point.clone().add(new THREE.Vector3(Math.max(2.8, radius * 0.2), Math.max(2.1, radius * 0.14), Math.max(2.8, radius * 0.2))));
+        camera.lookAt(point);
         controls.update();
-        setModelStats({ meshes: meshCount, vertices });
-        setLoading(false);
-
-        const focus = focusRecordId ? annotations.find((item) => item.recordId === focusRecordId) : null;
-        if (focus) focusPoint(new THREE.Vector3(focus.x, focus.y, focus.z), Math.max(2.6, radius * 0.24));
-      },
-      undefined,
-      (error) => {
-        if (!active) return;
-        console.error("[workspace.gltf]", error);
-        setLoadError("The photographic GLB could not be loaded. The R2 asset is retained; try reloading or replace the web derivative.");
-        setLoading(false);
       }
-    );
+    }, undefined, (error) => {
+      if (!active) return;
+      console.error("[workspace.gltf]", error);
+      setLoadError("The photographic GLB could not be loaded. The R2 asset is retained; try reloading or replace the web derivative.");
+      setLoading(false);
+    });
 
     const animate = () => {
       controls.update();
@@ -219,8 +210,9 @@ export default function WorkspaceViewer({
         element.style.top = `${(-vector.y * 0.5 + 0.5) * rect.height}px`;
         element.style.display = vector.z > -1 && vector.z < 1 ? "block" : "none";
       }
-      if (pendingPoint && pendingPinRef.current) {
-        const vector = new THREE.Vector3(...pendingPoint).project(camera);
+      const pending = pendingPointRef.current;
+      if (pending && pendingPinRef.current) {
+        const vector = new THREE.Vector3(...pending).project(camera);
         pendingPinRef.current.style.left = `${(vector.x * 0.5 + 0.5) * rect.width}px`;
         pendingPinRef.current.style.top = `${(-vector.y * 0.5 + 0.5) * rect.height}px`;
       }
@@ -249,21 +241,14 @@ export default function WorkspaceViewer({
       pointsRootRef.current = null;
       raycastMeshesRef.current = [];
     };
-  }, [annotations, focusRecordId, modelUrl, pendingPoint]);
+  }, [annotations, focusRecordId, modelUrl]);
 
   function setCameraPreset(preset: CameraPreset) {
     const camera = cameraRef.current;
     const controls = controlsRef.current;
     if (!camera || !controls) return;
-    const target = preset === "apse" ? new THREE.Vector3(-8.3, -0.6, 0)
-      : preset === "floor" ? new THREE.Vector3(-0.5, -2.1, 0)
-      : preset === "wall" ? new THREE.Vector3(5.8, 0.1, 4.1)
-      : new THREE.Vector3(-1, -0.4, 0);
-    const position = preset === "top" ? new THREE.Vector3(-1, 25, 0)
-      : preset === "apse" ? new THREE.Vector3(-17, 5, 11)
-      : preset === "floor" ? new THREE.Vector3(7, 7.5, 12)
-      : preset === "wall" ? new THREE.Vector3(15, 6, 13)
-      : new THREE.Vector3(17, 10, 20);
+    const target = preset === "apse" ? new THREE.Vector3(-8.3, -0.6, 0) : preset === "floor" ? new THREE.Vector3(-0.5, -2.1, 0) : preset === "wall" ? new THREE.Vector3(5.8, 0.1, 4.1) : new THREE.Vector3(-1, -0.4, 0);
+    const position = preset === "top" ? new THREE.Vector3(-1, 25, 0) : preset === "apse" ? new THREE.Vector3(-17, 5, 11) : preset === "floor" ? new THREE.Vector3(7, 7.5, 12) : preset === "wall" ? new THREE.Vector3(15, 6, 13) : new THREE.Vector3(17, 10, 20);
     camera.up.set(0, 1, 0);
     if (preset === "top") camera.up.set(0, 0, -1);
     camera.position.copy(position);
@@ -274,6 +259,7 @@ export default function WorkspaceViewer({
 
   function focusAnnotation(annotation: SpatialAnnotation) {
     setSelectedId(annotation.id);
+    pendingPointRef.current = null;
     setPendingPoint(null);
     const camera = cameraRef.current;
     const controls = controlsRef.current;
@@ -290,24 +276,12 @@ export default function WorkspaceViewer({
     setSaving(true);
     setSaveError("");
     try {
-      const response = await fetch("/api/workspace/annotations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          projectId: representation.projectId,
-          representationId: representation.id,
-          siteId: representation.siteId,
-          physicalObjectId: representation.physicalObjectId,
-          title,
-          description,
-          visibility,
-          point: pendingPoint
-        })
-      });
+      const response = await fetch("/api/workspace/annotations", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ projectId: representation.projectId, representationId: representation.id, siteId: representation.siteId, physicalObjectId: representation.physicalObjectId, title, description, visibility, point: pendingPoint }) });
       const payload = await response.json() as { error?: string };
       if (!response.ok) throw new Error(payload.error || "Could not save the spatial observation.");
       setTitle("");
       setDescription("");
+      pendingPointRef.current = null;
       setPendingPoint(null);
       setAnnotate(false);
       router.refresh();
@@ -339,69 +313,31 @@ export default function WorkspaceViewer({
     }
   }
 
-  return (
-    <div className={styles.workspace}>
-      <section className={styles.viewerShell}>
-        <div ref={mountRef} className={styles.canvas} />
-        {modelUrl ? (
-          <>
-            <div className={styles.toolbar}>
-              <div className={styles.toolbarGroup}>
-                <button className={mode === "photo" ? styles.active : ""} onClick={() => setMode("photo")}><Camera size={14} /> Photo</button>
-                <button className={mode === "points" ? styles.active : ""} onClick={() => setMode("points")}><ScanLine size={14} /> Points</button>
-                <button className={mode === "hybrid" ? styles.active : ""} onClick={() => setMode("hybrid")}><Layers3 size={14} /> Hybrid</button>
-              </div>
-              <div className={styles.toolbarGroup}>
-                <button onClick={() => setCameraPreset("overview")}><Eye size={14} /> Overview</button>
-                <button onClick={() => setCameraPreset("top")}>Top</button>
-                <button onClick={() => setCameraPreset("apse")}>Apse</button>
-                <button onClick={() => setCameraPreset("floor")}>Floor</button>
-                <button onClick={() => setCameraPreset("wall")}>Wall</button>
-              </div>
-              <div className={styles.toolbarGroup}>
-                <button className={annotate ? styles.annotate : ""} onClick={() => { setAnnotate((value) => !value); setPendingPoint(null); }}><Crosshair size={14} /> {annotate ? "Cancel annotation" : "Annotate in 3D"}</button>
-              </div>
-            </div>
-            {loading ? <div className={styles.loading}><div><strong>Loading Casignana</strong><span>Full textured photogrammetry derivative from private R2.</span></div></div> : null}
-            {loadError ? <div className={styles.loading}><div><strong>Model unavailable</strong><span>{loadError}</span></div></div> : null}
-            {annotations.map((annotation) => <button key={annotation.id} ref={(element) => { pinsRef.current[annotation.id] = element; }} className={`${styles.pin} ${selectedId === annotation.id ? styles.selected : ""}`} onClick={() => focusAnnotation(annotation)} aria-label={annotation.title || "Spatial annotation"}><span>{annotation.title}</span></button>)}
-            {pendingPoint ? <button ref={pendingPinRef} className={`${styles.pin} ${styles.pendingPin}`} aria-label="Pending spatial annotation" /> : null}
-            <div className={styles.viewerStatus}>{annotate ? "Annotation mode: click the photographic surface to anchor evidence." : `${representation.name} · ${modelStats.vertices ? modelStats.vertices.toLocaleString() : "…"} model vertices`}</div>
-          </>
-        ) : (
-          <div className={styles.noModel}>
-            <div className={styles.noModelInner}>
-              <Box size={46} />
-              <h2>Photographic representation ready for upload</h2>
-              <p>The Casignana representation exists in the knowledge model, but its browser GLB derivative has not yet been stored in this project&apos;s private R2 bucket.</p>
-              {representation.canManage ? <div className={styles.uploadBox}><label><span>Browser-ready GLB derivative</span><input type="file" accept=".glb,model/gltf-binary" onChange={(event) => setUploadFile(event.target.files?.[0] || null)} /></label><button disabled={!uploadFile || uploading} onClick={() => void uploadModel()}><Upload size={14} /> {uploading ? "Uploading..." : "Upload to R2"}</button>{uploadMessage ? <span className={styles.uploadMessage}>{uploadMessage}</span> : null}</div> : <p>Ask a project owner or admin to upload the GLB derivative.</p>}
-            </div>
-          </div>
-        )}
-      </section>
+  const uploadBox = representation.canManage ? <div className={styles.uploadBox}><label><span>{modelUrl ? "Replace browser GLB derivative" : "Browser-ready GLB derivative"}</span><input type="file" accept=".glb,model/gltf-binary" onChange={(event) => setUploadFile(event.target.files?.[0] || null)} /></label><button disabled={!uploadFile || uploading} onClick={() => void uploadModel()}><Upload size={14} /> {uploading ? "Uploading..." : modelUrl ? "Replace GLB" : "Upload to R2"}</button>{uploadMessage ? <span className={styles.uploadMessage}>{uploadMessage}</span> : null}</div> : null;
 
-      <aside className={styles.sidebar}>
-        <section className={styles.panel}>
-          <p className={styles.eyebrow}>Representation</p>
-          <h2>{representation.name}</h2>
-          <p className={styles.detailText}>{representation.coordinateSystem || "Local coordinates"}</p>
-          <div className={styles.meta}>
-            <div><span>Type</span><strong>{representation.representationType}</strong></div>
-            <div><span>Source</span><strong>{String(representation.metadata.sourceFormat || "Unknown")}</strong></div>
-            <div><span>Triangles</span><strong>{Number(representation.metadata.sourceTriangles || 0).toLocaleString()}</strong></div>
-            <div><span>Web model</span><strong>{bytesLabel(representation.webAssetSize)}</strong></div>
-            <div><span>Context</span><strong>{representation.objectName || representation.siteName || representation.projectName}</strong></div>
-          </div>
-          {representation.canManage && modelUrl ? <div className={styles.uploadBox}><label><span>Replace web derivative</span><input type="file" accept=".glb,model/gltf-binary" onChange={(event) => setUploadFile(event.target.files?.[0] || null)} /></label><button disabled={!uploadFile || uploading} onClick={() => void uploadModel()}><Upload size={14} /> {uploading ? "Uploading..." : "Replace GLB"}</button>{uploadMessage ? <span className={styles.uploadMessage}>{uploadMessage}</span> : null}</div> : null}
-        </section>
+  return <div className={styles.workspace}>
+    <section className={styles.viewerShell}>
+      <div ref={mountRef} className={styles.canvas} />
+      {modelUrl ? <>
+        <div className={styles.toolbar}>
+          <div className={styles.toolbarGroup}><button className={mode === "photo" ? styles.active : ""} onClick={() => setMode("photo")}><Camera size={14} /> Photo</button><button className={mode === "points" ? styles.active : ""} onClick={() => setMode("points")}><ScanLine size={14} /> Points</button><button className={mode === "hybrid" ? styles.active : ""} onClick={() => setMode("hybrid")}><Layers3 size={14} /> Hybrid</button></div>
+          <div className={styles.toolbarGroup}><button onClick={() => setCameraPreset("overview")}><Eye size={14} /> Overview</button><button onClick={() => setCameraPreset("top")}>Top</button><button onClick={() => setCameraPreset("apse")}>Apse</button><button onClick={() => setCameraPreset("floor")}>Floor</button><button onClick={() => setCameraPreset("wall")}>Wall</button></div>
+          <div className={styles.toolbarGroup}><button className={annotate ? styles.annotate : ""} onClick={() => { setAnnotate((value) => !value); pendingPointRef.current = null; setPendingPoint(null); }}><Crosshair size={14} /> {annotate ? "Cancel annotation" : "Annotate in 3D"}</button></div>
+        </div>
+        {loading ? <div className={styles.loading}><div><strong>Loading Casignana</strong><span>Full textured photogrammetry derivative from private R2.</span></div></div> : null}
+        {loadError ? <div className={styles.loading}><div><strong>Model unavailable</strong><span>{loadError}</span></div></div> : null}
+        {annotations.map((annotation) => <button key={annotation.id} ref={(element) => { pinsRef.current[annotation.id] = element; }} className={`${styles.pin} ${selectedId === annotation.id ? styles.selected : ""}`} onClick={() => focusAnnotation(annotation)} aria-label={annotation.title || "Spatial annotation"}><span>{annotation.title}</span></button>)}
+        {pendingPoint ? <button ref={pendingPinRef} className={`${styles.pin} ${styles.pendingPin}`} aria-label="Pending spatial annotation" /> : null}
+        <div className={styles.viewerStatus}>{annotate ? "Annotation mode: click the photographic surface to anchor evidence." : `${representation.name} · ${modelStats.vertices ? modelStats.vertices.toLocaleString() : "…"} model vertices`}</div>
+      </> : <div className={styles.noModel}><div className={styles.noModelInner}><Box size={46} /><h2>Photographic representation ready for upload</h2><p>The Casignana representation exists in the knowledge model, but its browser GLB derivative has not yet been stored in this project&apos;s private R2 bucket.</p>{uploadBox || <p>Ask a project owner or admin to upload the GLB derivative.</p>}</div></div>}
+    </section>
 
-        {pendingPoint ? <section className={styles.panel}><p className={styles.eyebrow}>New spatial observation</p><h3>Anchor evidence here</h3><form className={styles.annotationForm} onSubmit={(event) => { event.preventDefault(); void saveAnnotation(); }}><span className={styles.pointReadout}>XYZ {pendingPoint.map((value) => value.toFixed(4)).join(", ")}</span><label><span>Title</span><input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="e.g. mortar loss at wall edge" /></label><label><span>Observation</span><textarea rows={4} value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Record what is visible. Interpretation can follow later." /></label><label><span>Visibility</span><select value={visibility} onChange={(event) => setVisibility(event.target.value)}><option value="private">Private</option><option value="project">Project</option><option value="public">Public</option></select></label>{saveError ? <div className={styles.notice}>{saveError}</div> : null}<button disabled={saving}>{saving ? "Saving..." : "Create linked record"}</button></form></section> : selected ? <section className={styles.panel}><p className={styles.eyebrow}>Selected evidence</p><h3>{selected.title || "Spatial observation"}</h3><p className={styles.detailText}>{selected.description || "No description yet."}</p><div className={styles.meta}><div><span>Author</span><strong>{selected.authorName || selected.authorEmail}</strong></div><div><span>Visibility</span><strong>{selected.visibility}</strong></div><div><span>Status</span><strong>{selected.status}</strong></div><div><span>XYZ</span><strong>{[selected.x, selected.y, selected.z].map((value) => value.toFixed(3)).join(", ")}</strong></div></div><Link className={styles.recordLink} href={`/records/${selected.recordId}`}>Open full record →</Link></section> : <section className={styles.panel}><MapPin size={22} /><h3>Spatial evidence</h3><p className={styles.detailText}>Select a pin, or activate Annotate in 3D and click directly on the photographed surface.</p></section>}
+    <aside className={styles.sidebar}>
+      <section className={styles.panel}><p className={styles.eyebrow}>Representation</p><h2>{representation.name}</h2><p className={styles.detailText}>{representation.coordinateSystem || "Local coordinates"}</p><div className={styles.meta}><div><span>Type</span><strong>{representation.representationType}</strong></div><div><span>Source</span><strong>{String(representation.metadata.sourceFormat || "Unknown")}</strong></div><div><span>Triangles</span><strong>{Number(representation.metadata.sourceTriangles || 0).toLocaleString()}</strong></div><div><span>Web model</span><strong>{bytesLabel(representation.webAssetSize)}</strong></div><div><span>Context</span><strong>{representation.objectName || representation.siteName || representation.projectName}</strong></div></div>{modelUrl ? uploadBox : null}</section>
 
-        <section className={styles.panel}>
-          <p className={styles.eyebrow}>Linked observations</p>
-          <div className={styles.annotationList}>{annotations.length ? annotations.map((annotation) => <button key={annotation.id} className={`${styles.annotationButton} ${selectedId === annotation.id ? styles.active : ""}`} onClick={() => focusAnnotation(annotation)}><strong>{annotation.title || "Spatial observation"}</strong><span>{annotation.objectName || annotation.siteName || "Spatial anchor"} · {annotation.visibility}</span></button>) : <p className={styles.detailText}>No spatial observations yet. The first annotation will also create a normal Catalog record.</p>}</div>
-        </section>
-      </aside>
-    </div>
-  );
+      {pendingPoint ? <section className={styles.panel}><p className={styles.eyebrow}>New spatial observation</p><h3>Anchor evidence here</h3><form className={styles.annotationForm} onSubmit={(event) => { event.preventDefault(); void saveAnnotation(); }}><span className={styles.pointReadout}>XYZ {pendingPoint.map((value) => value.toFixed(4)).join(", ")}</span><label><span>Title</span><input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="e.g. mortar loss at wall edge" /></label><label><span>Observation</span><textarea rows={4} value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Record what is visible. Interpretation can follow later." /></label><label><span>Visibility</span><select value={visibility} onChange={(event) => setVisibility(event.target.value)}><option value="private">Private</option><option value="project">Project</option><option value="public">Public</option></select></label>{saveError ? <div className={styles.notice}>{saveError}</div> : null}<button disabled={saving}>{saving ? "Saving..." : "Create linked record"}</button></form></section> : selected ? <section className={styles.panel}><p className={styles.eyebrow}>Selected evidence</p><h3>{selected.title || "Spatial observation"}</h3><p className={styles.detailText}>{selected.description || "No description yet."}</p><div className={styles.meta}><div><span>Author</span><strong>{selected.authorName || selected.authorEmail}</strong></div><div><span>Visibility</span><strong>{selected.visibility}</strong></div><div><span>Status</span><strong>{selected.status}</strong></div><div><span>XYZ</span><strong>{[selected.x, selected.y, selected.z].map((value) => value.toFixed(3)).join(", ")}</strong></div></div><Link className={styles.recordLink} href={`/records/${selected.recordId}`}>Open full record →</Link></section> : <section className={styles.panel}><MapPin size={22} /><h3>Spatial evidence</h3><p className={styles.detailText}>Select a pin, or activate Annotate in 3D and click directly on the photographed surface.</p></section>}
+
+      <section className={styles.panel}><p className={styles.eyebrow}>Linked observations</p><div className={styles.annotationList}>{annotations.length ? annotations.map((annotation) => <button key={annotation.id} className={`${styles.annotationButton} ${selectedId === annotation.id ? styles.active : ""}`} onClick={() => focusAnnotation(annotation)}><strong>{annotation.title || "Spatial observation"}</strong><span>{annotation.objectName || annotation.siteName || "Spatial anchor"} · {annotation.visibility}</span></button>) : <p className={styles.detailText}>No spatial observations yet. The first annotation will also create a normal Catalog record.</p>}</div></section>
+    </aside>
+  </div>;
 }
