@@ -6,6 +6,7 @@ import WorkspaceViewer from "@/components/workspace-viewer";
 import { requireCurrentUser } from "@/lib/current-user";
 import { listProjectsForUser } from "@/lib/records";
 import { getWorkspaceRepresentation, listSpatialAnnotations } from "@/lib/spatial";
+import styles from "./workspace.module.css";
 
 export const dynamic = "force-dynamic";
 
@@ -28,10 +29,10 @@ export default async function WorkspacePage({ searchParams }: { searchParams: Pr
           <h1>Photographic 3D workspace</h1>
           <p>Navigate the real survey, switch representation views, and attach normal Catalog records directly to XYZ positions on the physical scene.</p>
         </div>
-        <div className="workspace-project-switcher">
-          <span><Box size={15} /> Project</span>
-          <div className="workspace-project-links">
-            {projects.map((project) => <Link key={project.slug} className={project.slug === selectedSlug ? "active" : ""} href={`/workspace?project=${encodeURIComponent(project.slug)}`}>{project.name}</Link>)}
+        <div className={styles.switcher}>
+          <span className={styles.label}><Box size={15} /> Project</span>
+          <div className={styles.links}>
+            {projects.map((project) => <Link key={project.slug} className={project.slug === selectedSlug ? styles.active : ""} href={`/workspace?project=${encodeURIComponent(project.slug)}`}>{project.name}</Link>)}
           </div>
         </div>
       </header>
