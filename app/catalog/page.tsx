@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { Camera, FileText, Mic, Plus, Shield, Users } from "lucide-react";
+import { Camera, FileText, Mic, Pencil, Plus, Shield, Users } from "lucide-react";
 import AppShell from "@/components/app-shell";
 import { requireCurrentUser } from "@/lib/current-user";
-import { getProjectForUser, listCatalogRecords, listObjectsForProject, listSitesForProject } from "@/lib/records";
+import { listCatalogRecords, listObjectsForProject, listProjectsForUser, listSitesForProject } from "@/lib/records";
 import { signedAssetUrl } from "@/lib/r2";
 import { createRecordAction } from "./actions";
 
@@ -14,15 +14,17 @@ function recordIcon(type: string) {
   return FileText;
 }
 
-export default async function CatalogPage() {
+export default async function CatalogPage({ searchParams }: { searchParams: Promise<{ project?: string }> }) {
   const user = await requireCurrentUser();
-  const project = await getProjectForUser("casignana", user.localUserId);
-  if (!project) throw new Error("Casignana pilot project is unavailable.");
+  const params = await searchParams;
+  const projects = await listProjectsForUser(user.localUserId);
+  const selectedProject = projects.find((project) => project.slug === params.project) || projects.find((project) => project.slug === "casignana") || projects[0];
+  if (!selectedProject) throw new Error("Create a project before adding catalog records.");
 
   const [records, sites, objects] = await Promise.all([
-    listCatalogRecords(String(project.id), user.localUserId),
-    listSitesForProject(String(project.id)),
-    listObjectsForProject(String(project.id))
+    listCatalogRecords(selectedProject.id, user.localUserId),
+    listSitesForProject(selectedProject.id),
+    listObjectsForProject(selectedProject.id)
   ]);
 
   const previews = new Map<string, string>();
@@ -34,15 +36,17 @@ export default async function CatalogPage() {
 
   return (
     <AppShell user={user} active="Catalog">
-      <header className="workspace-header">
-        <div><p className="eyebrow">Casignana · Phase 1</p><h1>Catalog</h1><p>One overview for field notes, photographs, documents and observations. Authorship and visibility stay attached to every record.</p></div>
+      <header className="workspace-header catalog-header">
+        <div><p className="eyebrow">{selectedProject.name} · Phase 1</p><h1>Catalog</h1><p>One overview for field notes, photographs, documents and observations. Authorship, visibility and project context stay attached to every record.</p></div>
         <div className="header-stat"><strong>{records.length}</strong><span>visible records</span></div>
       </header>
 
+      {projects.length > 1 ? <nav className="project-switcher" aria-label="Catalog project">{projects.map((project) => <Link className={project.id === selectedProject.id ? "active" : ""} href={`/catalog?project=${encodeURIComponent(project.slug)}`} key={project.id}>{project.name}</Link>)}</nav> : null}
+
       <section className="quick-add-panel">
-        <div className="panel-heading"><div><p className="eyebrow">Capture</p><h2>Add a record</h2></div><p>Capture now and refine later. Only the record type, visibility and description are essential for a quick field entry.</p></div>
+        <div className="panel-heading"><div><p className="eyebrow">Capture</p><h2>Add a record</h2></div><p>Capture now and refine later. The record is created inside {selectedProject.name}.</p></div>
         <form action={createRecordAction} className="record-form">
-          <input type="hidden" name="projectSlug" value="casignana" />
+          <input type="hidden" name="projectSlug" value={selectedProject.slug} />
           <label><span>Type</span><select name="recordType" defaultValue="note"><option value="note">Note</option><option value="photo">Photo</option><option value="document">Document</option><option value="observation">Observation</option><option value="measurement">Measurement</option><option value="voice">Voice</option></select></label>
           <label><span>Visibility</span><select name="visibility" defaultValue="project"><option value="private">Private</option><option value="project">Project</option><option value="public">Public</option></select></label>
           <label><span>Acquisition date</span><input type="datetime-local" name="acquisitionAt" /><small>Leave empty to use the capture time.</small></label>
@@ -56,16 +60,16 @@ export default async function CatalogPage() {
           <label className="wide file-field"><span>Photo or document</span><input type="file" name="file" accept="image/*,.pdf,.doc,.docx,.txt,.csv,.xlsx" /></label>
           <button className="primary-button" type="submit"><Plus size={16} /> Save record</button>
         </form>
-        <p className="form-note"><Shield size={13} /> Private records remain visible only to their author. Project records are visible to the Casignana team. Public is modeled now but external anonymous publishing remains disabled during the pilot.</p>
+        <p className="form-note"><Shield size={13} /> Private records remain visible only to their author. Project records are visible to project members. External anonymous publishing remains disabled during the pilot.</p>
       </section>
 
       <section className="catalog-section">
-        <div className="panel-heading"><div><p className="eyebrow">Evidence overview</p><h2>Records</h2></div><p><Users size={14} /> Each row keeps the original author and acquisition date, even when uploaded or processed later.</p></div>
+        <div className="panel-heading"><div><p className="eyebrow">Evidence overview</p><h2>Records</h2></div><p><Users size={14} /> Authors and project owners/admins can edit metadata. Original files and authorship remain preserved.</p></div>
         {records.length ? (
           <>
             <div className="catalog-table-wrap">
               <table className="catalog-table">
-                <thead><tr><th>ID</th><th>Preview</th><th>Type</th><th>Filter</th><th>Enhancement</th><th>Description</th><th>Acquisition</th><th>Author</th><th>Visibility</th><th>Context</th><th>Status</th></tr></thead>
+                <thead><tr><th>ID</th><th>Preview</th><th>Type</th><th>Filter</th><th>Enhancement</th><th>Description</th><th>Acquisition</th><th>Author</th><th>Visibility</th><th>Context</th><th>Status</th><th></th></tr></thead>
                 <tbody>{records.map((record) => {
                   const Icon = recordIcon(record.recordType);
                   const preview = previews.get(record.id);
@@ -81,6 +85,7 @@ export default async function CatalogPage() {
                     <td><span className={`visibility-badge ${record.visibility}`}>{record.visibility}</span></td>
                     <td>{record.objectName || record.siteName || "Unlinked"}</td>
                     <td>{record.status}</td>
+                    <td>{record.canEdit ? <Link className="icon-action" href={`/records/${record.id}/edit`} title="Edit record"><Pencil size={14} /></Link> : null}</td>
                   </tr>;
                 })}</tbody>
               </table>
@@ -88,13 +93,16 @@ export default async function CatalogPage() {
             <div className="catalog-cards">{records.map((record) => {
               const Icon = recordIcon(record.recordType);
               const preview = previews.get(record.id);
-              return <Link href={`/records/${record.id}`} className="catalog-card" key={record.id}>
-                {preview ? <img src={preview} alt="" /> : <div className="catalog-card-placeholder"><Icon size={22} /></div>}
-                <div><span className="catalog-meta">{record.recordType} · {new Date(record.acquisitionAt).toLocaleDateString("en-GB")}</span><strong>{record.title || record.description || "Untitled record"}</strong><p>{record.objectName || record.siteName || "Not linked yet"}</p><span className={`visibility-badge ${record.visibility}`}>{record.visibility}</span></div>
-              </Link>;
+              return <article className="catalog-card" key={record.id}>
+                <Link href={`/records/${record.id}`} className="catalog-card-main">
+                  {preview ? <img src={preview} alt="" /> : <div className="catalog-card-placeholder"><Icon size={22} /></div>}
+                  <div><span className="catalog-meta">{record.recordType} · {new Date(record.acquisitionAt).toLocaleDateString("en-GB")}</span><strong>{record.title || record.description || "Untitled record"}</strong><p>{record.objectName || record.siteName || "Not linked yet"}</p><span className={`visibility-badge ${record.visibility}`}>{record.visibility}</span></div>
+                </Link>
+                {record.canEdit ? <Link className="catalog-card-edit" href={`/records/${record.id}/edit`}><Pencil size={14} /> Edit</Link> : null}
+              </article>;
             })}</div>
           </>
-        ) : <div className="empty-state"><h3>No records yet</h3><p>Add the first Casignana note or photograph above.</p></div>}
+        ) : <div className="empty-state"><h3>No records yet</h3><p>Add the first note, photograph or document for {selectedProject.name} above.</p></div>}
       </section>
     </AppShell>
   );
