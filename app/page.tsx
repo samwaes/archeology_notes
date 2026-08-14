@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { Box, Camera, Database, FolderKanban, MapPinned, Search, ShieldCheck } from "lucide-react";
@@ -35,7 +36,7 @@ export default async function HomePage() {
     <>
       <main className="page-shell">
         <header className="topbar">
-          <a className="brand" href="/">hupla_<span>archeology notes</span></a>
+          <Link className="brand" href="/">hupla_<span>archeology notes</span></Link>
           <div className="user-chip"><ShieldCheck size={14} /> {email} · {decision.accessLevel}</div>
         </header>
 
