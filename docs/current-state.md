@@ -4,13 +4,27 @@ Updated: 2026-08-14
 
 ## Position
 
-Archeology Notes is moving from a Hupla discussion mockup into a standalone working prototype intended for testing with archaeologists and conservation professionals.
+Archeology Notes has moved from a Hupla discussion mockup into a standalone working prototype intended for testing with archaeologists and conservation professionals.
 
 Canonical implementation repository: `samwaes/archeology_notes`.
 
-Production target: `https://archeology-notes.hupla.eu`.
+Production: `https://archeology-notes.hupla.eu`.
 
 The earlier prototype remains in `samwaes/hupla.eu` under `/archeology-notes` as design and interaction history only. New product development belongs in this repository.
+
+## Infrastructure status
+
+Phase 0 passed on 2026-08-14.
+
+Validated production foundation:
+
+- standalone Next.js/TypeScript application in Coolify
+- Cloudflare Access protecting `archeology-notes.hupla.eu`
+- central Hupla identity, application grant and usage/session model
+- PostgreSQL with PostGIS 3.5
+- migration runner executed on container startup
+- private Cloudflare R2 bucket `archeology-notes`
+- `/api/health?deep=1` returning `ready`
 
 ## What the discussion prototype established
 
@@ -72,20 +86,21 @@ No explicit coordinate reference or acquisition metadata was supplied with the a
 
 The Hupla discussion prototype intentionally used only a sparse sampled representation for browser performance. That is useful for interaction testing but not dense enough for real professional inspection.
 
-For the standalone product, Casignana will become the first real project dataset. The preferred future browser representation is a textured photographic mesh, with dense point-cloud and hybrid modes added later.
+For the standalone product, Casignana is the first real project dataset. The preferred future browser representation is a textured photographic mesh, with dense point-cloud and hybrid modes added later.
 
-## Phase 0 status
+## Phase 1 implementation
 
-Phase 0 establishes:
+Phase 1 is now building the first persistent working loop:
 
-- standalone Next.js/TypeScript application
-- Docker/Coolify deployment
-- PostgreSQL + PostGIS
-- database migration runner
-- central Hupla identity/access reuse
-- central Hupla usage/session tracking
-- private Cloudflare R2 connectivity
-- health and dependency diagnostics
-- canonical project documentation
+- Casignana Project, Site and Physical Object records
+- Hupla-authenticated pilot membership
+- Private / Project / Public record visibility
+- note, photo, document, observation, measurement and voice record types
+- author and acquisition provenance
+- original asset storage in private R2 with SHA-256 checksum
+- Catalog desktop table and mobile cards
+- record detail and original asset access through short-lived signed URLs
+- basic structured search
+- audit events
 
-No production catalog, field capture or 3D workspace persistence is claimed in Phase 0.
+The first pilot automatically enrols Hupla-authorised Archeology Notes users into Casignana. Explicit invitation and project role administration will follow the first multi-user validation.
