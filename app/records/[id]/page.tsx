@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, FileText, Image as ImageIcon, LockKeyhole, MapPin, ShieldCheck, UserRound } from "lucide-react";
+import { ArrowLeft, FileText, Image as ImageIcon, LockKeyhole, MapPin, Pencil, ShieldCheck, UserRound } from "lucide-react";
 import { notFound } from "next/navigation";
 import AppShell from "@/components/app-shell";
 import { requireCurrentUser } from "@/lib/current-user";
@@ -22,7 +22,10 @@ export default async function RecordPage({ params }: { params: Promise<{ id: str
       <div className="record-detail-header">
         <Link href="/catalog" className="back-link"><ArrowLeft size={15} /> Catalog</Link>
         <div className="record-detail-title"><p className="eyebrow">{String(record.record_type)} · {String(record.status)}</p><h1>{record.title ? String(record.title) : record.description ? String(record.description).slice(0, 80) : "Untitled record"}</h1></div>
-        <span className={`visibility-badge ${String(record.visibility)}`}><LockKeyhole size={12} /> {String(record.visibility)}</span>
+        <div className="record-header-actions">
+          <span className={`visibility-badge ${String(record.visibility)}`}><LockKeyhole size={12} /> {String(record.visibility)}</span>
+          {record.can_edit ? <Link className="secondary-button" href={`/records/${id}/edit`}><Pencil size={14} /> Edit</Link> : null}
+        </div>
       </div>
 
       <div className="record-detail-grid">
