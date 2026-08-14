@@ -3,7 +3,8 @@ import { AlertTriangle, ArrowRight, Box, Database, MapPinned, Plus, Settings2, U
 import { notFound } from "next/navigation";
 import AppShell from "@/components/app-shell";
 import { requireCurrentUser } from "@/lib/current-user";
-import { getProjectForUser, listCatalogRecords, listObjectsForProject, listProjectMembers, listSitesForProject } from "@/lib/records";
+import { listProjectMembers } from "@/lib/project-members";
+import { getProjectForUser, listCatalogRecords, listObjectsForProject, listSitesForProject } from "@/lib/records";
 import { createPhysicalObjectAction, createSiteAction, updateProjectAction } from "../actions";
 
 export const dynamic = "force-dynamic";
