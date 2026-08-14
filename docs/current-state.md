@@ -1,6 +1,6 @@
 # Current state
 
-Updated: 2026-08-14
+Updated: 2026-08-15
 
 ## Position
 
@@ -25,6 +25,41 @@ Validated production foundation:
 - migration runner executed on container startup
 - private Cloudflare R2 bucket `archeology-notes`
 - `/api/health?deep=1` returning `ready`
+
+## Current working product
+
+Phase 1 now provides the persistent project and catalog loop:
+
+- create and manage Projects
+- Sites and Physical Objects
+- Hupla-authenticated project membership
+- Private / Project / Public visibility
+- notes, photos, documents, observations, measurements and voice record types
+- authorship and acquisition provenance
+- original files in private R2 with SHA-256 checksums
+- project-aware Catalog desktop table and mobile cards
+- record detail and editing
+- permission checks for record editing
+- basic search
+- audit events
+
+Gate 1 still needs an explicit two-user validation, especially around private-record isolation and owner/admin editing.
+
+Phase 2 adds the first real onsite capture workflow:
+
+- mobile-first field workspace
+- persistent project/site/object context on the device
+- camera and photo-library capture
+- quick note and observation capture
+- measurement value and unit
+- browser microphone recording
+- original audio retained in R2
+- optional server-side transcription
+- GPS position and browser-reported accuracy
+- automatic author and acquisition time
+- field inbox for later Catalog refinement
+
+The original audio remains evidence. A transcription is derived text and can fail or be disabled without losing the voice note.
 
 ## What the discussion prototype established
 
@@ -86,21 +121,4 @@ No explicit coordinate reference or acquisition metadata was supplied with the a
 
 The Hupla discussion prototype intentionally used only a sparse sampled representation for browser performance. That is useful for interaction testing but not dense enough for real professional inspection.
 
-For the standalone product, Casignana is the first real project dataset. The preferred future browser representation is a textured photographic mesh, with dense point-cloud and hybrid modes added later.
-
-## Phase 1 implementation
-
-Phase 1 is now building the first persistent working loop:
-
-- Casignana Project, Site and Physical Object records
-- Hupla-authenticated pilot membership
-- Private / Project / Public record visibility
-- note, photo, document, observation, measurement and voice record types
-- author and acquisition provenance
-- original asset storage in private R2 with SHA-256 checksum
-- Catalog desktop table and mobile cards
-- record detail and original asset access through short-lived signed URLs
-- basic structured search
-- audit events
-
-The first pilot automatically enrols Hupla-authorised Archeology Notes users into Casignana. Explicit invitation and project role administration will follow the first multi-user validation.
+For the standalone product, Casignana is the first real project dataset. The preferred Phase 3 browser representation is a textured photographic mesh, with dense point-cloud and hybrid modes added later.

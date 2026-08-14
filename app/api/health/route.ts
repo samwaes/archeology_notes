@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { databaseConfiguration, validateDatabaseConnection } from "@/lib/db";
 import { huplaAccessConfiguration } from "@/lib/hupla-access";
 import { r2Configuration, validateR2Connection } from "@/lib/r2";
+import { transcriptionConfiguration } from "@/lib/transcription";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,6 +13,7 @@ export async function GET(request: Request) {
   const database = databaseConfiguration();
   const r2 = r2Configuration();
   const hupla = huplaAccessConfiguration();
+  const transcription = transcriptionConfiguration();
 
   const base = {
     service: "archeology-notes",
@@ -21,7 +23,8 @@ export async function GET(request: Request) {
       database: database.configured,
       r2: r2.configured,
       huplaAccess: hupla.configured,
-      failClosed: hupla.failClosed
+      failClosed: hupla.failClosed,
+      transcription: transcription.configured
     }
   };
 
@@ -48,6 +51,11 @@ export async function GET(request: Request) {
 
   if (!hupla.configured) healthy = false;
   checks.huplaAccess = { configured: hupla.configured, failClosed: hupla.failClosed };
+  checks.transcription = {
+    configured: transcription.configured,
+    provider: transcription.provider,
+    model: transcription.model
+  };
 
   return NextResponse.json({ ...base, status: healthy ? "ready" : "degraded", checks }, {
     status: healthy ? 200 : 503,
