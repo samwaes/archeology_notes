@@ -1,6 +1,6 @@
 # Development plan
 
-Updated: 2026-08-14
+Updated: 2026-08-15
 
 ## Phase 0: standalone foundation
 
@@ -21,48 +21,63 @@ Gate 0 passed on 2026-08-14. A Hupla-authorised user can open the deployed appli
 
 ## Phase 1: real project, records and catalog
 
-Status: **in implementation**
+Status: **implemented, Gate 1 multi-user validation still pending**
 
-Implement:
+Implemented:
 
-- Project
-- Site
-- Physical Object
-- project membership
-- records
-- text notes
-- photographs
-- documents
-- authorship
+- create and manage Projects
+- Site and Physical Object hierarchy
+- project membership and project roles
+- notes, photographs, documents, observations, measurements and voice record types
+- authorship and acquisition provenance
 - Private / Project / Public visibility
-- catalog desktop table and mobile cards
-- filtering and basic search
+- original uploads in private R2 with SHA-256 checksum
+- project-aware Catalog desktop table and mobile cards
 - record detail
+- record editing with permission checks
+- original author and original asset preserved through edits
 - audit history
-- source/derivative relationships
+- basic structured search
 
-Casignana is the first project dataset.
+Casignana remains the first real project dataset. Additional projects can now be created through the application.
 
-The first implementation slice uses a deliberate pilot simplification: Hupla-authorised Archeology Notes users are automatically enrolled in Casignana. Explicit project invitations and role administration will replace this bootstrap after the first multi-user test.
+The pilot simplification remains: Hupla-authorised Archeology Notes users are automatically enrolled in Casignana. Explicit project invitations and role administration will replace this bootstrap after the first multi-user test.
 
 Gate 1: two authorised users can collaborate in one project without cross-user exposure of private records. Original photo/document uploads must persist in private R2 and retain author, acquisition date and source provenance.
 
 ## Phase 2: field prototype
 
-Implement mobile-first:
+Status: **implementation available, field validation pending**
 
-- camera capture
-- photo library
-- rapid text note
-- microphone recording
-- original audio retention
-- transcription
-- GPS
-- current site/object context
-- acquisition time and author automatically
-- field inbox for later classification
+Implemented in the first Phase 2 slice:
 
-Gate 2: a user can capture at least ten useful onsite observations on a phone without needing the desktop workflow.
+- mobile-first field capture workspace
+- project, site and physical-object context retained on the device between captures
+- camera capture and photo-library selection
+- rapid text note and observation capture
+- measurement value + unit capture
+- browser microphone recording
+- original audio retained in private R2
+- optional server-side voice transcription
+- transcription stored as derived text, never as replacement for original audio
+- GPS capture with browser-reported accuracy
+- acquisition time and author captured automatically
+- Private / Project / Public visibility at capture time
+- field inbox for later catalog refinement
+- field GPS and transcription shown in record detail
+
+Transcription is provider-isolated behind `lib/transcription.ts`. The initial provider is OpenAI audio transcription when explicitly configured. Without a transcription key, voice capture still works and the original audio is retained.
+
+Not yet in Phase 2:
+
+- offline queue
+- background sync
+- conflict handling
+- direct 3D spatial anchoring
+
+These remain later slices because the first goal is to validate whether the fast online field workflow is useful before adding offline complexity.
+
+Gate 2: a user can capture at least ten useful onsite observations on a phone without needing the desktop workflow. The test should include photos, a voice note, a text note, a measurement, GPS and later Catalog refinement.
 
 ## Phase 3: real photographic 3D workspace
 
