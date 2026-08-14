@@ -1,4 +1,5 @@
-import { ListObjectsV2Command, S3Client } from "@aws-sdk/client-s3";
+import { GetObjectCommand, ListObjectsV2Command, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 let client: S3Client | null = null;
 
@@ -37,4 +38,30 @@ export async function validateR2Connection() {
   const config = r2Configuration();
   await getR2Client().send(new ListObjectsV2Command({ Bucket: config.bucket, MaxKeys: 1 }));
   return { bucket: config.bucket };
+}
+
+export async function putRecordAsset(input: {
+  key: string;
+  body: Uint8Array;
+  contentType?: string | null;
+  metadata?: Record<string, string>;
+}) {
+  const config = r2Configuration();
+  await getR2Client().send(new PutObjectCommand({
+    Bucket: config.bucket,
+    Key: input.key,
+    Body: input.body,
+    ContentType: input.contentType || undefined,
+    Metadata: input.metadata
+  }));
+  return input.key;
+}
+
+export async function signedAssetUrl(key: string, expiresInSeconds = 900) {
+  const config = r2Configuration();
+  return getSignedUrl(
+    getR2Client(),
+    new GetObjectCommand({ Bucket: config.bucket, Key: key }),
+    { expiresIn: expiresInSeconds }
+  );
 }
