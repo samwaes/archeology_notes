@@ -79,8 +79,8 @@ export default async function CatalogPage() {
                     <td><Link href={`/records/${record.id}`} className="record-id">{record.id.slice(0, 8)}</Link></td>
                     <td>{preview ? <img className="record-thumb" src={preview} alt="" /> : <span className="record-placeholder"><Icon size={17} /></span>}</td>
                     <td>{record.recordType}</td>
-                    <td>{record.filterName || "—"}</td>
-                    <td>{record.enhancement || "—"}</td>
+                    <td>{record.filterName || "Not set"}</td>
+                    <td>{record.enhancement || "Not set"}</td>
                     <td><Link href={`/records/${record.id}`} className="record-title">{record.title || record.description || "Untitled record"}</Link></td>
                     <td>{new Date(record.acquisitionAt).toLocaleDateString("en-GB")}</td>
                     <td>{record.authorName || record.authorEmail}</td>
