@@ -4,6 +4,7 @@ import { createHash, randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireCurrentUser } from "@/lib/current-user";
+import { validateRecordContext } from "@/lib/context-validation";
 import {
   attachAssetToRecord,
   createDigitalAsset,
@@ -40,6 +41,8 @@ export async function createRecordAction(formData: FormData) {
 
   const siteId = text(formData, "siteId") || null;
   const physicalObjectId = text(formData, "physicalObjectId") || null;
+  await validateRecordContext(String(project.id), siteId, physicalObjectId);
+
   const recordId = await createRecord({
     projectId: String(project.id),
     siteId,
