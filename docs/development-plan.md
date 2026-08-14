@@ -109,25 +109,43 @@ The GLB is a web derivative. The supplied OBJ and texture remain the preservatio
 
 Gate 3: deploy migration `0004_phase3_spatial_workspace.sql`, upload the Casignana GLB derivative, navigate the photographic model, create a spatial observation on the real surface, open it from Catalog, use `Show in 3D`, and verify that it returns to the same XYZ context.
 
-This remains the target for the first serious external user test after Gate 2 and Gate 3 behaviour have been checked internally.
-
 ## Phase 4: dense point clouds and multiple representations
 
-Implement:
+Status: **implemented as a functional prototype, Gate 4 requires a real large point-cloud test**
 
-- E57/LAS/LAZ source ingestion strategy
-- preservation originals
-- COPC/LAZ or compatible web derivatives
-- streaming point-cloud viewer
-- level of detail
-- multiple overlapping scans
-- independent layer control
-- registration transforms
-- resolution and registration uncertainty
-- object-specific detail scans
-- scientifically distinct photogrammetry, TLS/LiDAR and derived vertex layers
+Implemented:
 
-Gate 4: a realistically large survey remains fluid enough for professional inspection and annotation.
+- multiple independent representations per project/site/physical object
+- optional parent representation for object-specific detail scans
+- acquisition date and coordinate-frame metadata per representation
+- preservation source formats including E57, LAS, LAZ and COPC
+- browser point-cloud format standardised on COPC (`.copc.laz`)
+- private R2 source and web-derivative asset separation
+- authenticated HTTP Range proxy from the application to private R2
+- TypeScript COPC hierarchy parsing and LAZ node decompression in the browser
+- Three.js rendering of selected COPC octree nodes
+- explicit point budget and octree-depth controls
+- multiple overlapping mesh and point-cloud layers in one workspace
+- independent layer visibility and opacity
+- Photo / Points / Hybrid modes across layers
+- source-to-project 4×4 registration transform per representation
+- registration state: unregistered / approximate / registered / verified
+- separate nominal resolution, registration RMSE and registration uncertainty
+- visible warnings when registration or uncertainty evidence is incomplete
+- spatial annotations can be created on an active mesh or point-cloud layer and remain linked to that representation
+- owner/admin representation creation and asset-management interface
+- project/site/object/parent validation so layers cannot be linked across projects
+- documented PDAL E57/LAS/LAZ → COPC conversion and preservation strategy in `docs/point-cloud-ingestion.md`
+
+### Deliberate prototype boundary
+
+The current viewer uses real COPC range requests and octree nodes, but the first LOD strategy is a point-budget + maximum-depth selection rather than a mature camera-driven screen-space-error scheduler. This is sufficient to test whether dense survey layers and spatial evidence are useful in the product before investing in a full streaming engine.
+
+Browser uploads are also deliberately limited to 220 MB source assets and 140 MB web derivatives. Multi-gigabyte institutional ingestion belongs in a later multipart upload + conversion worker, not in the Next.js request path.
+
+Gate 4: deploy migration `0005_phase4_pointcloud_layers.sql`, ingest a representative E57/LAS/LAZ/COPC survey, retain the original source, register a COPC web representation, open it alongside another representation, inspect it at multiple point budgets, create a point-cloud annotation, and verify acceptable responsiveness and spatial round-trip behaviour on a realistically large dataset.
+
+Do not mark Gate 4 passed until a genuine professional-size dataset has been tested.
 
 ## Phase 5: comparison and conservation workflow
 
@@ -136,7 +154,7 @@ Implement:
 - survey A/B overlay
 - fade and split comparison
 - distance/change visualisation
-- registration uncertainty warnings
+- registration uncertainty warnings applied to change interpretation
 - conservation interventions
 - condition classifications
 - object timeline
@@ -157,6 +175,7 @@ Driven by real user evidence:
 - batch actions
 - tablet optimisation
 - improved search
+- multipart survey ingestion and asynchronous conversion if Gate 4 proves the need
 
 ## Phase 7: heritage intelligence
 

@@ -57,16 +57,23 @@ export async function putRecordAsset(input: {
   return input.key;
 }
 
-export async function getR2Object(key: string) {
+export async function getR2Object(key: string, range?: string | null) {
   const config = r2Configuration();
-  const result = await getR2Client().send(new GetObjectCommand({ Bucket: config.bucket, Key: key }));
+  const result = await getR2Client().send(new GetObjectCommand({
+    Bucket: config.bucket,
+    Key: key,
+    Range: range || undefined
+  }));
   if (!result.Body) throw new Error("The R2 object has no response body.");
   const bytes = await result.Body.transformToByteArray();
   return {
     bytes,
     contentType: result.ContentType || "application/octet-stream",
     contentLength: result.ContentLength ? Number(result.ContentLength) : bytes.byteLength,
-    etag: result.ETag || null
+    contentRange: result.ContentRange || null,
+    acceptRanges: result.AcceptRanges || "bytes",
+    etag: result.ETag || null,
+    lastModified: result.LastModified || null
   };
 }
 

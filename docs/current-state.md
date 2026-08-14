@@ -61,22 +61,40 @@ Phase 2 adds the first real onsite capture workflow:
 
 The original audio remains evidence. A transcription is derived text and can fail or be disabled without losing the voice note. Gate 2 field validation has been deliberately deferred until an onsite-style phone test is convenient.
 
-Phase 3 now connects the persistent record layer to a real photographic 3D representation:
+Phase 3 connects the persistent record layer to a real photographic 3D representation:
 
 - Representation is a first-class database entity and remains separate from the Physical Object
 - Casignana is seeded as the first photogrammetry representation
 - a web GLB derivative is stored in private R2, not committed as the preservation source
 - the 3D viewer defaults to the photographic textured mesh
-- Photo, Points and Hybrid modes are available from the same loaded derivative
-- the Points mode uses the mesh vertices and is explicitly a derived vertex view, not a native TLS/LiDAR source
 - orbit, pan, zoom and Casignana-specific camera viewpoints are supported
 - users can click a photographic surface and create a persistent XYZ observation
 - XYZ anchors are stored as PostGIS `PointZ`
 - a spatial observation creates a normal Catalog record with the same author and visibility controls
 - a Catalog record with a spatial anchor exposes `Show in 3D`
-- the 3D workspace can reopen around the selected record's spatial context
 
-Gate 3 still requires production deployment, one-time upload of the generated Casignana GLB derivative into the project's R2 representation, and a round-trip annotation test.
+Gate 3 still requires production round-trip validation with the generated Casignana GLB derivative.
+
+Phase 4 generalises the 3D workspace from one photographic model into a multi-representation survey environment:
+
+- one project, site or physical object can have multiple independent representations
+- a detail scan can reference a parent representation without being merged into it
+- photogrammetry, mesh and point-cloud layers can overlap in the same project workspace
+- each layer has its own source format, acquisition date, coordinate frame and source-to-project transform
+- source E57/LAS/LAZ/COPC can be preserved unchanged in private R2
+- COPC is the first browser point-cloud representation
+- private R2 point clouds are exposed only through an authenticated range-capable application endpoint
+- COPC metadata and octree hierarchy are read by range request
+- selected LAZ nodes are decompressed client-side and rendered with Three.js
+- the viewer exposes point-budget and octree-depth controls
+- layers have independent visibility and opacity
+- Photo / Points / Hybrid modes can combine photographic and point-cloud evidence
+- registration status, nominal resolution, RMSE and wider registration uncertainty are separate fields
+- missing registration evidence is visible rather than silently treated as accurate
+- spatial records remain attached to the representation on which they were observed, while their display can use the stored source-to-project transform
+- project owners/admins can create layers, preserve source files, upload COPC/GLB web representations and edit registration metadata
+
+Gate 4 is not passed yet. The implementation now needs a genuine dense E57/LAS/LAZ/COPC test dataset to validate responsiveness, layer overlap, coordinate handling and annotation behaviour at professional survey scale.
 
 ## What the discussion prototype established
 
@@ -98,18 +116,24 @@ The strongest design conclusions are retained in the standalone product.
 
 A wall, capital, trench, room or artefact is a persistent physical entity. A LiDAR scan, photogrammetry mesh, macro scan or historical survey is a representation of that entity at a point in time.
 
-The product must therefore support:
+The product therefore supports a direction where:
 
-- one physical object with many representations
-- one survey containing many physical objects
-- multiple overlapping surveys in one registered spatial scene
-- annotations that persist even when the active representation changes
+- one physical object has many representations
+- one survey can cover many physical objects
+- multiple overlapping surveys coexist in one registered project frame
+- annotations stay linked to the representation and evidence from which they were made
 
 ### Original evidence and derivatives must remain distinguishable
 
-A source OBJ, E57, LAZ, image, audio file or document is preservation evidence. Browser-optimised GLB, COPC, contrast-enhanced image, transcription or AI analysis is a derivative.
+A source OBJ, E57, LAS/LAZ, image, audio file or document is preservation evidence. Browser-optimised GLB, COPC, contrast-enhanced image, transcription or AI analysis is a derivative unless the delivered source was already in that format.
 
 The system must never silently replace the original with the derivative.
+
+### Registration accuracy is not scan density
+
+Dense points do not automatically mean accurate change detection. Nominal point resolution, registration RMSE and broader registration uncertainty are separate concepts and are stored separately.
+
+This becomes a hard requirement for Phase 5 change/comparison tools.
 
 ### Field capture must be faster than cataloguing
 
@@ -136,8 +160,17 @@ The supplied archive contains a textured photogrammetry model:
 
 No explicit coordinate reference or acquisition metadata was supplied with the archive.
 
-The Hupla discussion prototype intentionally used only a sparse sampled representation for browser performance. That was useful for interaction testing but not dense enough for professional inspection.
+For Phase 3, a full textured GLB derivative has been generated from the supplied OBJ and texture. It keeps the full prototype mesh geometry and packages the photographic texture into a browser-loadable file of about 13 MB.
 
-For Phase 3, a full textured GLB derivative has been generated from the supplied OBJ and texture. It keeps the full prototype mesh geometry and packages the photographic texture into a browser-loadable file of about 13 MB. The standalone viewer uses this derivative as the photographic working representation and can derive a much denser vertex display from it.
+Casignana remains useful for photogrammetry and spatial-annotation validation, but it is not a native dense LiDAR/TLS dataset. Phase 4 therefore requires an additional real point-cloud dataset before its performance and professional usability gate can be considered validated.
 
-The GLB remains a derivative. The original OBJ and texture remain the preservation/source evidence. Native dense point-cloud ingestion, COPC/LAZ streaming, multiple overlapping surveys and registration uncertainty remain Phase 4.
+## Point-cloud preservation route
+
+The canonical workflow is documented in `docs/point-cloud-ingestion.md`:
+
+- preserve the acquired E57/LAS/LAZ/COPC source in R2 with checksum
+- retain known coordinate, acquisition, resolution and registration metadata
+- derive COPC where necessary for interactive access
+- never invent missing CRS or uncertainty data
+- use the same source file as the web stream when the delivered source is already COPC and there is no preservation reason to duplicate it
+- move multi-gigabyte upload/conversion to a dedicated ingestion worker only after Gate 4 demonstrates the need
