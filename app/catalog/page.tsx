@@ -14,12 +14,6 @@ function recordIcon(type: string) {
   return FileText;
 }
 
-function dateInputValue() {
-  const now = new Date();
-  const local = new Date(now.getTime() - now.getTimezoneOffset() * 60_000);
-  return local.toISOString().slice(0, 16);
-}
-
 export default async function CatalogPage() {
   const user = await requireCurrentUser();
   const project = await getProjectForUser("casignana", user.localUserId);
@@ -51,7 +45,7 @@ export default async function CatalogPage() {
           <input type="hidden" name="projectSlug" value="casignana" />
           <label><span>Type</span><select name="recordType" defaultValue="note"><option value="note">Note</option><option value="photo">Photo</option><option value="document">Document</option><option value="observation">Observation</option><option value="measurement">Measurement</option><option value="voice">Voice</option></select></label>
           <label><span>Visibility</span><select name="visibility" defaultValue="project"><option value="private">Private</option><option value="project">Project</option><option value="public">Public</option></select></label>
-          <label><span>Acquisition date</span><input type="datetime-local" name="acquisitionAt" defaultValue={dateInputValue()} /></label>
+          <label><span>Acquisition date</span><input type="datetime-local" name="acquisitionAt" /><small>Leave empty to use the capture time.</small></label>
           <label><span>Site</span><select name="siteId" defaultValue={String(sites[0]?.id || "")}><option value="">No site</option>{sites.map((site) => <option value={String(site.id)} key={String(site.id)}>{String(site.name)}</option>)}</select></label>
           <label><span>Physical object</span><select name="physicalObjectId" defaultValue={String(objects[0]?.id || "")}><option value="">Link later</option>{objects.map((object) => <option value={String(object.id)} key={String(object.id)}>{String(object.name)}</option>)}</select></label>
           <label className="wide"><span>Title</span><input name="title" placeholder="Optional short title" /></label>
