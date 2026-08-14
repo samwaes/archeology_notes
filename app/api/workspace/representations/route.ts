@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { requireCurrentUser } from "@/lib/current-user";
-import { getProjectForUser } from "@/lib/records";
+import { getProjectForUser, listObjectsForProject, listSitesForProject } from "@/lib/records";
 import {
   createRepresentation,
+  getWorkspaceRepresentationById,
   updateRepresentationRegistration,
   type RegistrationStatus
 } from "@/lib/spatial";
@@ -37,14 +38,29 @@ export async function POST(request: Request) {
     const registrationStatus = (optionalString(body.registrationStatus) || "unregistered") as RegistrationStatus;
     if (!REGISTRATION.has(registrationStatus)) return NextResponse.json({ error: "Invalid registration status." }, { status: 400 });
 
+    const projectId = String(project.id);
+    const siteId = optionalString(body.siteId);
+    const physicalObjectId = optionalString(body.physicalObjectId);
+    const parentRepresentationId = optionalString(body.parentRepresentationId);
+    const [sites, objects, parentRepresentation] = await Promise.all([
+      siteId ? listSitesForProject(projectId) : Promise.resolve([]),
+      physicalObjectId ? listObjectsForProject(projectId) : Promise.resolve([]),
+      parentRepresentationId ? getWorkspaceRepresentationById(parentRepresentationId, user.localUserId) : Promise.resolve(null)
+    ]);
+    if (siteId && !sites.some((site) => String(site.id) === siteId)) return NextResponse.json({ error: "The selected site does not belong to this project." }, { status: 400 });
+    const selectedObject = physicalObjectId ? objects.find((object) => String(object.id) === physicalObjectId) : null;
+    if (physicalObjectId && !selectedObject) return NextResponse.json({ error: "The selected physical object does not belong to this project." }, { status: 400 });
+    if (selectedObject && siteId && String(selectedObject.site_id) !== siteId) return NextResponse.json({ error: "The selected physical object does not belong to the selected site." }, { status: 400 });
+    if (parentRepresentationId && (!parentRepresentation || parentRepresentation.projectId !== projectId)) return NextResponse.json({ error: "The parent representation does not belong to this project." }, { status: 400 });
+
     const id = await createRepresentation({
-      projectId: String(project.id),
+      projectId,
       actorId: user.localUserId,
       name,
       representationType,
-      siteId: optionalString(body.siteId),
-      physicalObjectId: optionalString(body.physicalObjectId),
-      parentRepresentationId: optionalString(body.parentRepresentationId),
+      siteId,
+      physicalObjectId,
+      parentRepresentationId,
       acquisitionAt: optionalString(body.acquisitionAt),
       coordinateSystem: optionalString(body.coordinateSystem),
       sourceFormat: optionalString(body.sourceFormat),
