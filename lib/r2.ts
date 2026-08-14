@@ -57,6 +57,19 @@ export async function putRecordAsset(input: {
   return input.key;
 }
 
+export async function getR2Object(key: string) {
+  const config = r2Configuration();
+  const result = await getR2Client().send(new GetObjectCommand({ Bucket: config.bucket, Key: key }));
+  if (!result.Body) throw new Error("The R2 object has no response body.");
+  const bytes = await result.Body.transformToByteArray();
+  return {
+    bytes,
+    contentType: result.ContentType || "application/octet-stream",
+    contentLength: result.ContentLength ? Number(result.ContentLength) : bytes.byteLength,
+    etag: result.ETag || null
+  };
+}
+
 export async function signedAssetUrl(key: string, expiresInSeconds = 900) {
   const config = r2Configuration();
   return getSignedUrl(

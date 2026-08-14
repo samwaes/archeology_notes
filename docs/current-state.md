@@ -28,7 +28,7 @@ Validated production foundation:
 
 ## Current working product
 
-Phase 1 now provides the persistent project and catalog loop:
+Phase 1 provides the persistent project and catalog loop:
 
 - create and manage Projects
 - Sites and Physical Objects
@@ -59,7 +59,24 @@ Phase 2 adds the first real onsite capture workflow:
 - automatic author and acquisition time
 - field inbox for later Catalog refinement
 
-The original audio remains evidence. A transcription is derived text and can fail or be disabled without losing the voice note.
+The original audio remains evidence. A transcription is derived text and can fail or be disabled without losing the voice note. Gate 2 field validation has been deliberately deferred until an onsite-style phone test is convenient.
+
+Phase 3 now connects the persistent record layer to a real photographic 3D representation:
+
+- Representation is a first-class database entity and remains separate from the Physical Object
+- Casignana is seeded as the first photogrammetry representation
+- a web GLB derivative is stored in private R2, not committed as the preservation source
+- the 3D viewer defaults to the photographic textured mesh
+- Photo, Points and Hybrid modes are available from the same loaded derivative
+- the Points mode uses the mesh vertices and is explicitly a derived vertex view, not a native TLS/LiDAR source
+- orbit, pan, zoom and Casignana-specific camera viewpoints are supported
+- users can click a photographic surface and create a persistent XYZ observation
+- XYZ anchors are stored as PostGIS `PointZ`
+- a spatial observation creates a normal Catalog record with the same author and visibility controls
+- a Catalog record with a spatial anchor exposes `Show in 3D`
+- the 3D workspace can reopen around the selected record's spatial context
+
+Gate 3 still requires production deployment, one-time upload of the generated Casignana GLB derivative into the project's R2 representation, and a round-trip annotation test.
 
 ## What the discussion prototype established
 
@@ -119,6 +136,8 @@ The supplied archive contains a textured photogrammetry model:
 
 No explicit coordinate reference or acquisition metadata was supplied with the archive.
 
-The Hupla discussion prototype intentionally used only a sparse sampled representation for browser performance. That is useful for interaction testing but not dense enough for real professional inspection.
+The Hupla discussion prototype intentionally used only a sparse sampled representation for browser performance. That was useful for interaction testing but not dense enough for professional inspection.
 
-For the standalone product, Casignana is the first real project dataset. The preferred Phase 3 browser representation is a textured photographic mesh, with dense point-cloud and hybrid modes added later.
+For Phase 3, a full textured GLB derivative has been generated from the supplied OBJ and texture. It keeps the full prototype mesh geometry and packages the photographic texture into a browser-loadable file of about 13 MB. The standalone viewer uses this derivative as the photographic working representation and can derive a much denser vertex display from it.
+
+The GLB remains a derivative. The original OBJ and texture remain the preservation/source evidence. Native dense point-cloud ingestion, COPC/LAZ streaming, multiple overlapping surveys and registration uncertainty remain Phase 4.
