@@ -47,9 +47,9 @@ Gate 1: two authorised users can collaborate in one project without cross-user e
 
 ## Phase 2: field prototype
 
-Status: **implementation available, field validation pending**
+Status: **implemented, Gate 2 field validation deferred until user test**
 
-Implemented in the first Phase 2 slice:
+Implemented:
 
 - mobile-first field capture workspace
 - project, site and physical-object context retained on the device between captures
@@ -73,7 +73,6 @@ Not yet in Phase 2:
 - offline queue
 - background sync
 - conflict handling
-- direct 3D spatial anchoring
 
 These remain later slices because the first goal is to validate whether the fast online field workflow is useful before adding offline complexity.
 
@@ -81,20 +80,36 @@ Gate 2: a user can capture at least ten useful onsite observations on a phone wi
 
 ## Phase 3: real photographic 3D workspace
 
-Implement:
+Status: **implemented in code, deployment and spatial validation pending**
 
-- browser-optimised textured Casignana model
-- orbit/pan/zoom
-- predefined views
-- 3D point annotation
-- persisted spatial records
-- catalog → Show in 3D
-- annotation → related records
-- object/area selection
+Implemented:
 
-Gate 3: a record can be attached to an actual Casignana location and later reopened at the same spatial context.
+- first-class Representation registry separate from Physical Objects and source evidence
+- seeded Casignana photogrammetry representation with known source properties and explicit missing-CRS metadata
+- browser-ready GLB assets stored as private R2 derivatives rather than repository binaries
+- protected same-origin model streaming from R2
+- full textured photographic model as the default working view
+- orbit, pan and zoom navigation
+- Overview, Top, Apse, Floor and Wall viewpoints for the Casignana pilot
+- Photo, Points and Hybrid views
+- Points mode derives a dense vertex representation from the loaded web mesh and is not presented as an original LiDAR/TLS point cloud
+- direct surface raycasting for XYZ annotation
+- spatial anchors persisted as PostGIS `PointZ`
+- every spatial observation creates a normal Catalog record with author and visibility
+- spatial annotations respect Private / Project visibility rules
+- record detail exposes its XYZ anchor and `Show in 3D`
+- selecting a record through `Show in 3D` returns the viewer to that spatial context
+- owner/admin GLB replacement workflow without replacing the preservation source
 
-This is the target for the first serious external user test.
+### Casignana browser derivative
+
+A full textured GLB derivative has been generated from the supplied Casignana OBJ and 8000 × 8000 texture for Phase 3 validation. It retains the full source mesh geometry used for the prototype, approximately 244,639 vertices and 486,261 triangles, while packaging the photographic texture into a browser-loadable asset of about 13 MB.
+
+The GLB is a web derivative. The supplied OBJ and texture remain the preservation/source evidence. The derivative must be uploaded once through the 3D Workspace after deployment so it is stored in the project's private R2 bucket and registered against the Casignana representation.
+
+Gate 3: deploy migration `0004_phase3_spatial_workspace.sql`, upload the Casignana GLB derivative, navigate the photographic model, create a spatial observation on the real surface, open it from Catalog, use `Show in 3D`, and verify that it returns to the same XYZ context.
+
+This remains the target for the first serious external user test after Gate 2 and Gate 3 behaviour have been checked internally.
 
 ## Phase 4: dense point clouds and multiple representations
 
@@ -104,13 +119,13 @@ Implement:
 - preservation originals
 - COPC/LAZ or compatible web derivatives
 - streaming point-cloud viewer
-- Photo / Point / Hybrid modes
 - level of detail
 - multiple overlapping scans
 - independent layer control
 - registration transforms
 - resolution and registration uncertainty
 - object-specific detail scans
+- scientifically distinct photogrammetry, TLS/LiDAR and derived vertex layers
 
 Gate 4: a realistically large survey remains fluid enough for professional inspection and annotation.
 
