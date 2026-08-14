@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Box, Database, MapPin } from "lucide-react";
+import { Box } from "lucide-react";
 import AppShell from "@/components/app-shell";
 import WorkspaceViewer from "@/components/workspace-viewer";
 import { requireCurrentUser } from "@/lib/current-user";
-import { listProjectsForUser } from "@/lib/records";
-import { getWorkspaceRepresentation, listSpatialAnnotations } from "@/lib/spatial";
+import { listObjectsForProject, listProjectsForUser, listSitesForProject } from "@/lib/records";
+import { listSpatialAnnotations, listWorkspaceRepresentations } from "@/lib/spatial";
 import styles from "./workspace.module.css";
 
 export const dynamic = "force-dynamic";
@@ -17,17 +17,21 @@ export default async function WorkspacePage({ searchParams }: { searchParams: Pr
   if (!projects.length) notFound();
   const requestedSlug = params.project && projects.some((project) => project.slug === params.project) ? params.project : null;
   const selectedSlug = requestedSlug || (projects.some((project) => project.slug === "casignana") ? "casignana" : projects[0].slug);
-  const representation = await getWorkspaceRepresentation(selectedSlug, user.localUserId);
-  const annotations = representation ? await listSpatialAnnotations(representation.projectId, user.localUserId) : [];
   const selectedProject = projects.find((project) => project.slug === selectedSlug) || projects[0];
+  const [representations, sites, objects] = await Promise.all([
+    listWorkspaceRepresentations(selectedSlug, user.localUserId),
+    listSitesForProject(selectedProject.id),
+    listObjectsForProject(selectedProject.id)
+  ]);
+  const annotations = await listSpatialAnnotations(selectedProject.id, user.localUserId);
 
   return (
     <AppShell user={user} active="3D Workspace">
       <header className="workspace-header">
         <div>
-          <p className="eyebrow">Phase 3 · spatial workspace</p>
-          <h1>Photographic 3D workspace</h1>
-          <p>Navigate the real survey, switch representation views, and attach normal Catalog records directly to XYZ positions on the physical scene.</p>
+          <p className="eyebrow">Phase 4 · multi-representation survey workspace</p>
+          <h1>Survey layers in one spatial context</h1>
+          <p>Photogrammetry, dense point clouds and object-specific detail scans remain independent evidence layers. They can overlap in one registered project frame without pretending that the physical object and any one scan are the same thing.</p>
         </div>
         <div className={styles.switcher}>
           <span className={styles.label}><Box size={15} /> Project</span>
@@ -37,15 +41,21 @@ export default async function WorkspacePage({ searchParams }: { searchParams: Pr
         </div>
       </header>
 
-      {representation ? <WorkspaceViewer representation={representation} annotations={annotations} focusRecordId={params.record || null} /> : (
-        <section className="future-workspace">
-          <div className="future-scene"><Box size={64} /><span>No 3D representation yet</span><small>{selectedProject.name}</small></div>
-          <div className="future-notes">
-            <div><MapPin size={19} /><span><strong>Create the spatial context first</strong><small>Phase 3 currently seeds the supplied Casignana photogrammetry representation. Other projects can receive representations in the next ingestion slice.</small></span></div>
-            <div><Database size={19} /><span><strong>Catalog remains available</strong><small>Records can already be captured and classified before a 3D representation is registered.</small></span></div>
-          </div>
-        </section>
-      )}
+      <WorkspaceViewer
+        project={{ id: selectedProject.id, slug: selectedProject.slug, name: selectedProject.name }}
+        representations={representations}
+        annotations={annotations}
+        sites={sites.map((site) => ({ id: String(site.id), code: site.code ? String(site.code) : null, name: String(site.name) }))}
+        objects={objects.map((object) => ({
+          id: String(object.id),
+          siteId: String(object.site_id),
+          parentObjectId: object.parent_object_id ? String(object.parent_object_id) : null,
+          objectType: String(object.object_type),
+          code: object.code ? String(object.code) : null,
+          name: String(object.name)
+        }))}
+        focusRecordId={params.record || null}
+      />
     </AppShell>
   );
 }
