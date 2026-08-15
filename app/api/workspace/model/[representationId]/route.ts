@@ -23,7 +23,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ repr
         "Content-Length": String(object.contentLength),
         "Accept-Ranges": "bytes",
         ...(object.contentRange ? { "Content-Range": object.contentRange } : {}),
-        "Cache-Control": "private, max-age=300",
+        // Representation assets can be replaced during the pilot. The URL is stable, so browser caching
+        // would otherwise keep serving the previous GLB/COPC after a successful replacement upload.
+        "Cache-Control": "private, no-store, max-age=0",
         "Content-Disposition": `inline; filename="${String(asset.original_filename || "representation.bin").replace(/\"/g, "")}"`,
         ...(object.etag ? { ETag: object.etag } : {}),
         ...(object.lastModified ? { "Last-Modified": object.lastModified.toUTCString() } : {})
