@@ -57,8 +57,8 @@ export default async function HomePage() {
         <section>
           <div className={styles.sectionHeader}><div><p>Guides</p><h2>Download the manuals</h2></div><span>Use the short guide for a first session. The full manual covers every function currently available in this testing release.</span></div>
           <div className={styles.manualGrid}>
-            <a className={styles.manualCard} href="/manuals/quick-start.pdf"><span className={styles.manualIcon}><BookOpen size={23} /></span><div><h3>Quick Start Guide</h3><p>4 pages. The five-step workflow, field/offline capture, conservation, 3D basics, visibility and support.</p></div><span className={styles.download}><Download size={15} /> PDF</span></a>
-            <a className={styles.manualCard} href="/manuals/user-manual.pdf"><span className={styles.manualIcon}><BookOpen size={23} /></span><div><h3>Full User Manual</h3><p>10 pages. Projects, Catalog, Field, offline sync, Conservation, records, 3D Workspace, Search, roles, exports and troubleshooting.</p></div><span className={styles.download}><Download size={15} /> PDF</span></a>
+            <a className={styles.manualCard} href="/manuals/quick-start.pdf"><span className={styles.manualIcon}><BookOpen size={23} /></span><div><h3>Quick Start Guide</h3><p>A compact introduction to the five-step workflow, field/offline capture, conservation, 3D basics, visibility and support.</p></div><span className={styles.download}><Download size={15} /> PDF</span></a>
+            <a className={styles.manualCard} href="/manuals/user-manual.pdf"><span className={styles.manualIcon}><BookOpen size={23} /></span><div><h3>Full User Manual</h3><p>Complete reference for Projects, Catalog, Field, offline sync, Conservation, records, 3D Workspace, Search, roles, exports and troubleshooting.</p></div><span className={styles.download}><Download size={15} /> PDF</span></a>
           </div>
         </section>
 
