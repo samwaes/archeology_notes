@@ -1,20 +1,19 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import { AlertTriangle, Box, Camera, CheckCircle2, Crosshair, Eye, Layers3, MapPin, ScanLine, SlidersHorizontal } from "lucide-react";
+import { AlertTriangle, Box, Camera, CheckCircle2, Crosshair, Eye, Layers3, ScanLine, SlidersHorizontal } from "lucide-react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { loadCopcPointLayer, type CopcLoadedLayer } from "@/components/copc-point-layer";
 import RepresentationManager from "@/components/representation-manager";
+import WorkspaceAnnotationSheet from "@/components/workspace-annotation-sheet";
 import type { SpatialAnnotation, WorkspaceRepresentation } from "@/lib/spatial";
 import styles from "./workspace-viewer.module.css";
 
 type ViewMode = "photo" | "points" | "hybrid";
 type CameraPreset = "overview" | "top" | "apse" | "floor" | "wall";
-type ProjectRef = { id: string; slug: string; name: string; role: string };
+type ProjectRef = { id: string; slug: string; name: string; role: string; currentUserEmail: string };
 type SiteRef = { id: string; code: string | null; name: string };
 type ObjectRef = { id: string; siteId: string; parentObjectId: string | null; objectType: string; code: string | null; name: string };
 type PendingPoint = { representationId: string; point: [number, number, number] };
@@ -75,10 +74,10 @@ export default function WorkspaceViewer({ project, representations, annotations,
   objects: ObjectRef[];
   focusRecordId?: string | null;
 }) {
-  const router = useRouter();
   const representationMap = useMemo(() => new Map(representations.map((item) => [item.id, item])), [representations]);
   const focusedRecordAnnotation = useMemo(() => annotations.find((item) => item.recordId === focusRecordId) || null, [annotations, focusRecordId]);
   const initialActiveId = focusedRecordAnnotation?.representationId || representations.find((item) => item.isPrimary)?.id || representations[0]?.id || null;
+  const hasPointCloud = representations.some(pointCloudFormat);
 
   const mountRef = useRef<HTMLDivElement | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
@@ -94,7 +93,7 @@ export default function WorkspaceViewer({ project, representations, annotations,
   const visibilityRef = useRef<Record<string, boolean>>(Object.fromEntries(representations.map((item) => [item.id, item.visibleByDefault])));
   const opacityRef = useRef<Record<string, number>>(Object.fromEntries(representations.map((item) => [item.id, item.opacityDefault])));
 
-  const [mode, setMode] = useState<ViewMode>(representations.some(pointCloudFormat) ? "hybrid" : "photo");
+  const [mode, setMode] = useState<ViewMode>(hasPointCloud ? "hybrid" : "photo");
   const [activeRepresentationId, setActiveRepresentationId] = useState<string | null>(initialActiveId);
   const [visibility, setVisibility] = useState<Record<string, boolean>>(() => Object.fromEntries(representations.map((item) => [item.id, item.visibleByDefault])));
   const [opacity, setOpacity] = useState<Record<string, number>>(() => Object.fromEntries(representations.map((item) => [item.id, item.opacityDefault])));
@@ -105,15 +104,15 @@ export default function WorkspaceViewer({ project, representations, annotations,
   const [loadingLayers, setLoadingLayers] = useState(() => representations.filter((item) => item.webAssetId).length);
   const [annotate, setAnnotate] = useState(false);
   const [pendingPoint, setPendingPoint] = useState<PendingPoint | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(() => focusedRecordAnnotation?.id || annotations[0]?.id || null);
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [recordVisibility, setRecordVisibility] = useState("project");
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState("");
+  const [selectedId, setSelectedId] = useState<string | null>(() => focusedRecordAnnotation?.id || null);
 
   const activeRepresentation = activeRepresentationId ? representationMap.get(activeRepresentationId) || null : null;
   const selected = useMemo(() => annotations.find((item) => item.id === selectedId) || null, [annotations, selectedId]);
+  const sheetRepresentation = pendingPoint
+    ? representationMap.get(pendingPoint.representationId) || null
+    : selected
+      ? representationMap.get(selected.representationId) || null
+      : null;
 
   function applyAppearance() {
     for (const [id, runtime] of runtimeRef.current) {
@@ -403,7 +402,8 @@ export default function WorkspaceViewer({ project, representations, annotations,
       pendingPointRef.current = value;
       setPendingPoint(value);
       setSelectedId(null);
-      setSaveError("");
+      annotateRef.current = false;
+      setAnnotate(false);
     };
     renderer.domElement.addEventListener("click", handleClick);
 
@@ -487,10 +487,13 @@ export default function WorkspaceViewer({ project, representations, annotations,
     pendingPointRef.current = null;
     setPendingPoint(null);
     setSelectedId(null);
-    setSaveError("");
+    annotateRef.current = false;
+    setAnnotate(false);
   }
 
   function focusAnnotation(annotation: SpatialAnnotation) {
+    annotateRef.current = false;
+    setAnnotate(false);
     setSelectedId(annotation.id);
     pendingPointRef.current = null;
     setPendingPoint(null);
@@ -510,40 +513,24 @@ export default function WorkspaceViewer({ project, representations, annotations,
     controls.update();
   }
 
-  async function saveAnnotation() {
-    if (!pendingPoint) return;
-    const representation = representationMap.get(pendingPoint.representationId);
-    if (!representation) return;
-    setSaving(true);
-    setSaveError("");
-    try {
-      const response = await fetch("/api/workspace/annotations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          projectId: representation.projectId,
-          representationId: representation.id,
-          siteId: representation.siteId,
-          physicalObjectId: representation.physicalObjectId,
-          title,
-          description,
-          visibility: recordVisibility,
-          point: pendingPoint.point
-        })
-      });
-      const payload = await response.json() as { error?: string };
-      if (!response.ok) throw new Error(payload.error || "Could not save the spatial observation.");
-      setTitle("");
-      setDescription("");
-      pendingPointRef.current = null;
-      setPendingPoint(null);
+  function toggleAnnotationMode() {
+    if (annotate) {
+      annotateRef.current = false;
       setAnnotate(false);
-      router.refresh();
-    } catch (error) {
-      setSaveError(error instanceof Error ? error.message : "Could not save the spatial observation.");
-    } finally {
-      setSaving(false);
+      return;
     }
+    if (!activeRepresentation?.webAssetId) return;
+    setSelectedId(null);
+    pendingPointRef.current = null;
+    setPendingPoint(null);
+    annotateRef.current = true;
+    setAnnotate(true);
+  }
+
+  function closeSheet() {
+    pendingPointRef.current = null;
+    setPendingPoint(null);
+    setSelectedId(null);
   }
 
   const activeStats = activeRepresentation ? layerStats[activeRepresentation.id] : null;
@@ -553,19 +540,55 @@ export default function WorkspaceViewer({ project, representations, annotations,
   return <div className={styles.workspace}>
     <section className={styles.viewerShell}>
       <div ref={mountRef} className={styles.canvas} />
-      <div className={styles.toolbar}>
-        <div className={styles.toolbarGroup}><button className={mode === "photo" ? styles.active : ""} onClick={() => setMode("photo")}><Camera size={14} /> Photo</button><button className={mode === "points" ? styles.active : ""} onClick={() => setMode("points")}><ScanLine size={14} /> Points</button><button className={mode === "hybrid" ? styles.active : ""} onClick={() => setMode("hybrid")}><Layers3 size={14} /> Hybrid</button></div>
-        <div className={styles.toolbarGroup}><button onClick={() => setCameraPreset("overview")}><Eye size={14} /> Overview</button><button onClick={() => setCameraPreset("top")}>Top</button>{project.slug === "casignana" ? <><button onClick={() => setCameraPreset("apse")}>Apse</button><button onClick={() => setCameraPreset("floor")}>Floor</button><button onClick={() => setCameraPreset("wall")}>Wall</button></> : null}</div>
-        <div className={styles.toolbarGroup}><button className={annotate ? styles.annotate : ""} disabled={!activeRepresentation?.webAssetId} onClick={() => { setAnnotate((value) => !value); pendingPointRef.current = null; setPendingPoint(null); }}><Crosshair size={14} /> {annotate ? "Cancel annotation" : "Annotate active layer"}</button></div>
+
+      <div className={styles.viewerTopbar}>
+        <div className={styles.modeSwitch} aria-label="3D display mode">
+          <button className={mode === "photo" ? styles.active : ""} onClick={() => setMode("photo")}><Camera size={15} /><span>Photo</span></button>
+          <button className={mode === "points" ? styles.active : ""} onClick={() => setMode("points")}><ScanLine size={15} /><span>Points</span></button>
+          <button className={mode === "hybrid" ? styles.active : ""} onClick={() => setMode("hybrid")}><Layers3 size={15} /><span>Hybrid</span></button>
+        </div>
+        <div className={styles.viewerQuickActions}>
+          <button className={styles.topIconButton} onClick={() => setCameraPreset("overview")} title="Fit model"><Eye size={16} /><span>Fit</span></button>
+          <details className={styles.viewerMenu}>
+            <summary>Views</summary>
+            <div className={styles.viewerMenuPopover}>
+              <button onClick={() => setCameraPreset("overview")}>Overview</button>
+              <button onClick={() => setCameraPreset("top")}>Top</button>
+              {project.slug === "casignana" ? <><button onClick={() => setCameraPreset("apse")}>Apse</button><button onClick={() => setCameraPreset("floor")}>Floor</button><button onClick={() => setCameraPreset("wall")}>Wall</button></> : null}
+            </div>
+          </details>
+          {hasPointCloud ? <details className={styles.viewerMenu}>
+            <summary><SlidersHorizontal size={14} /> Points</summary>
+            <div className={`${styles.viewerMenuPopover} ${styles.pointMenu}`}>
+              <label>Point budget<select value={pointBudget} onChange={(event) => setPointBudget(Number(event.target.value))}><option value={100000}>100k</option><option value={250000}>250k</option><option value={500000}>500k</option><option value={1000000}>1M</option></select></label>
+              <label>Octree depth<select value={lodDepth} onChange={(event) => setLodDepth(Number(event.target.value))}><option value={3}>3</option><option value={4}>4</option><option value={5}>5</option><option value={6}>6</option><option value={7}>7</option></select></label>
+            </div>
+          </details> : null}
+        </div>
       </div>
 
-      <div className={styles.lodControls}><SlidersHorizontal size={14} /><label>Point budget<select value={pointBudget} onChange={(event) => setPointBudget(Number(event.target.value))}><option value={100000}>100k</option><option value={250000}>250k</option><option value={500000}>500k</option><option value={1000000}>1M</option></select></label><label>Octree depth<select value={lodDepth} onChange={(event) => setLodDepth(Number(event.target.value))}><option value={3}>3</option><option value={4}>4</option><option value={5}>5</option><option value={6}>6</option><option value={7}>7</option></select></label></div>
+      <button className={`${styles.floatingAnnotate} ${annotate ? styles.annotationActive : ""}`} disabled={!activeRepresentation?.webAssetId} onClick={toggleAnnotationMode}><Crosshair size={18} /><span>{annotate ? "Cancel" : "Annotate"}</span></button>
+      {annotate ? <div className={styles.annotateHint}><Crosshair size={15} /><span>Tap the model where the evidence is located</span></div> : null}
 
       {!representations.length ? <div className={styles.loading}><div><Box size={32} /><strong>No survey representation yet</strong><span>Create the first photogrammetry, point-cloud or detail-scan layer in the management panel.</span></div></div> : loadingLayers ? <div className={styles.loadingCompact}>{loadingLayers} survey layer{loadingLayers === 1 ? "" : "s"} loading...</div> : null}
       {activeError ? <div className={styles.layerError}><AlertTriangle size={15} /> {activeError}</div> : null}
-      {annotations.map((annotation) => <button key={annotation.id} ref={(element) => { pinsRef.current[annotation.id] = element; }} className={`${styles.pin} ${selectedId === annotation.id ? styles.selected : ""}`} onClick={() => focusAnnotation(annotation)} aria-label={annotation.title || "Spatial annotation"}><span>{annotation.title}</span></button>)}
+      {annotations.map((annotation) => <button key={annotation.id} ref={(element) => { pinsRef.current[annotation.id] = element; }} className={`${styles.pin} ${styles[`pin_${annotation.status}`] || ""} ${selectedId === annotation.id ? styles.selected : ""}`} onClick={(event) => { event.stopPropagation(); focusAnnotation(annotation); }} aria-label={`${annotation.title || "Spatial annotation"}, ${annotation.status}`}><span>{annotation.title || "Observation"}</span></button>)}
       {pendingPoint ? <button ref={pendingPinRef} className={`${styles.pin} ${styles.pendingPin}`} aria-label="Pending spatial annotation" /> : null}
-      <div className={styles.viewerStatus}>{annotate ? `Annotation mode · ${activeRepresentation?.name || "select a layer"}` : activeRepresentation ? `${activeRepresentation.name}${activeStats?.kind === "copc" ? ` · ${(activeStats.loadedPoints || 0).toLocaleString()} streamed points` : activeStats?.vertices ? ` · ${activeStats.vertices.toLocaleString()} mesh vertices` : ""}` : `${project.name} · no active layer`}</div>
+
+      {sheetRepresentation && (pendingPoint || selected) ? <WorkspaceAnnotationSheet
+        key={pendingPoint ? `new-${pendingPoint.representationId}-${pendingPoint.point.join("-")}` : `existing-${selected?.id}`}
+        project={project}
+        representation={sheetRepresentation}
+        sites={sites}
+        objects={objects}
+        pendingPoint={pendingPoint}
+        annotation={selected}
+        onClose={closeSheet}
+        onFocus={selected ? () => focusAnnotation(selected) : undefined}
+        onSaved={() => { if (pendingPoint) closeSheet(); }}
+      /> : null}
+
+      <div className={styles.viewerStatus}>{activeRepresentation ? `${activeRepresentation.name}${activeStats?.kind === "copc" ? ` · ${(activeStats.loadedPoints || 0).toLocaleString()} streamed points` : activeStats?.vertices ? ` · ${activeStats.vertices.toLocaleString()} mesh vertices` : ""}` : `${project.name} · no active layer`}</div>
     </section>
 
     <aside className={styles.sidebar}>
@@ -585,9 +608,11 @@ export default function WorkspaceViewer({ project, representations, annotations,
 
       {activeRepresentation ? <section className={styles.panel}><p className={styles.eyebrow}>Active representation</p><h3>{activeRepresentation.name}</h3><p className={styles.detailText}>{activeRepresentation.coordinateSystem || "Coordinate frame not documented"}</p><div className={styles.meta}><div><span>Context</span><strong>{activeRepresentation.objectName || activeRepresentation.siteName || project.name}</strong></div><div><span>Source</span><strong>{activeRepresentation.sourceFormat || "Unknown"} · {bytesLabel(activeRepresentation.sourceAssetSize)}</strong></div><div><span>Web</span><strong>{activeRepresentation.webFormat || "None"} · {bytesLabel(activeRepresentation.webAssetSize)}</strong></div><div><span>Registration</span><strong>{activeRepresentation.registrationStatus}{activeRepresentation.registrationRmseMm !== null ? ` · RMSE ${activeRepresentation.registrationRmseMm} mm` : ""}</strong></div><div><span>Resolution</span><strong>{activeRepresentation.nominalResolutionMm !== null ? `${activeRepresentation.nominalResolutionMm} mm` : "Unknown"}</strong></div>{activeStats?.kind === "copc" ? <><div><span>Streamed</span><strong>{(activeStats.loadedPoints || 0).toLocaleString()} points · {activeStats.nodes || 0} nodes</strong></div><div><span>LOD</span><strong>depth {activeStats.depth || 0} · budget {pointBudget.toLocaleString()}</strong></div></> : null}</div>{activeRepresentation.registrationStatus === "unregistered" || activeRepresentation.registrationUncertaintyMm === null ? <div className={styles.uncertaintyWarning}><AlertTriangle size={14} /><span>{activeRepresentation.registrationStatus === "unregistered" ? "This layer is not registered to the common project frame." : "Registration uncertainty is not documented. Do not interpret sub-resolution differences as conservation change."}</span></div> : null}</section> : null}
 
-      {pendingPoint ? <section className={styles.panel}><p className={styles.eyebrow}>New spatial observation</p><h3>Anchor evidence on {representationMap.get(pendingPoint.representationId)?.name}</h3><form className={styles.annotationForm} onSubmit={(event) => { event.preventDefault(); void saveAnnotation(); }}><span className={styles.pointReadout}>XYZ {pendingPoint.point.map((value) => value.toFixed(4)).join(", ")}</span><label><span>Title</span><input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="e.g. mortar loss at wall edge" /></label><label><span>Observation</span><textarea rows={4} value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Record what is visible. Interpretation can follow later." /></label><label><span>Visibility</span><select value={recordVisibility} onChange={(event) => setRecordVisibility(event.target.value)}><option value="private">Private</option><option value="project">Project</option><option value="public">Public</option></select></label>{saveError ? <div className={styles.notice}>{saveError}</div> : null}<button disabled={saving}>{saving ? "Saving..." : "Create linked record"}</button></form></section> : selected ? <section className={styles.panel}><p className={styles.eyebrow}>Selected evidence</p><h3>{selected.title || "Spatial observation"}</h3><p className={styles.detailText}>{selected.description || "No description yet."}</p><div className={styles.meta}><div><span>Layer</span><strong>{representationMap.get(selected.representationId)?.name || "Unknown"}</strong></div><div><span>Author</span><strong>{selected.authorName || selected.authorEmail}</strong></div><div><span>Visibility</span><strong>{selected.visibility}</strong></div><div><span>Status</span><strong>{selected.status}</strong></div><div><span>XYZ</span><strong>{[selected.x, selected.y, selected.z].map((value) => value.toFixed(3)).join(", ")}</strong></div></div><Link className={styles.recordLink} href={`/records/${selected.recordId}`}>Open full record →</Link></section> : <section className={styles.panel}><MapPin size={22} /><h3>Spatial evidence</h3><p className={styles.detailText}>Select a layer, activate annotation mode, then click its visible mesh or point cloud. The resulting observation remains a normal Catalog record.</p></section>}
-
-      <section className={styles.panel}><p className={styles.eyebrow}>Linked observations</p><div className={styles.annotationList}>{annotations.length ? annotations.map((annotation) => <button key={annotation.id} className={`${styles.annotationButton} ${selectedId === annotation.id ? styles.active : ""}`} onClick={() => focusAnnotation(annotation)}><strong>{annotation.title || "Spatial observation"}</strong><span>{representationMap.get(annotation.representationId)?.name || "Layer"} · {annotation.visibility}</span></button>) : <p className={styles.detailText}>No spatial observations yet.</p>}</div></section>
+      <section className={styles.panel}>
+        <div className={styles.panelHeading}><div><p className={styles.eyebrow}>Spatial evidence</p><h3>{annotations.length} annotation{annotations.length === 1 ? "" : "s"}</h3></div></div>
+        <p className={styles.detailText}>Tap a marker in the model or select an item here to review it without leaving the 3D context.</p>
+        <div className={styles.annotationList}>{annotations.length ? annotations.map((annotation) => <button key={annotation.id} className={`${styles.annotationButton} ${selectedId === annotation.id ? styles.active : ""}`} onClick={() => focusAnnotation(annotation)}><strong>{annotation.title || "Spatial observation"}</strong><span>{representationMap.get(annotation.representationId)?.name || "Layer"} · {annotation.status} · {annotation.visibility}</span></button>) : <p className={styles.detailText}>No spatial observations yet. Use Annotate in the model to create one.</p>}</div>
+      </section>
 
       {canManage ? <RepresentationManager key={activeRepresentation?.id || "none"} project={project} representations={representations} activeRepresentation={activeRepresentation} sites={sites} objects={objects} /> : null}
     </aside>
