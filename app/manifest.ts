@@ -1,0 +1,2 @@
+import type { MetadataRoute } from "next";
+export default function manifest():MetadataRoute.Manifest{return {name:"Archeology Notes",short_name:"Archeology",description:"Field, evidence and conservation workspace for archaeology.",start_url:"/field",display:"standalone",background_color:"#f8f4ea",theme_color:"#1f5949",orientation:"any",icons:[{src:"/archeology-icon.svg",sizes:"any",type:"image/svg+xml",purpose:"any"}]};}
