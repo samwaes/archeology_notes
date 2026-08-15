@@ -2,7 +2,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { upsertApplicationUser } from "@/lib/db";
 import { authenticatedAccessEmail, getHuplaAccessDecision } from "@/lib/hupla-access";
-import { ensurePilotMembership } from "@/lib/records";
+import { ensureCasignanaPilotMembership } from "@/lib/project-members";
 
 export type CurrentUser = {
   email: string;
@@ -22,7 +22,7 @@ export async function requireCurrentUser(): Promise<CurrentUser> {
   const localUserId = await upsertApplicationUser({ huplaUserId: decision.userId, email });
   if (!localUserId) throw new Error("Could not establish the local Archeology Notes user.");
 
-  await ensurePilotMembership(localUserId);
+  await ensureCasignanaPilotMembership(localUserId);
 
   return {
     email,
