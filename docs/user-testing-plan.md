@@ -2,9 +2,34 @@
 
 Updated: 2026-08-15
 
+## Status
+
+Archeology Notes is **in user testing**.
+
+The next work is not another broad feature phase. It is a structured pilot with archaeologists, conservators and heritage documentation users.
+
+Testing contact and access requests: `samwaes@gmail.com`.
+
+## Tester onboarding
+
+A new tester should be able to start without a live walkthrough.
+
+The onboarding path is:
+
+1. open the Home page
+2. understand the stated purpose and intended audience
+3. read the five-step Quick Start summary
+4. download the Quick Start PDF if useful
+5. use the full User Manual only when more detail is needed
+6. start with Projects or Field capture
+
+The manuals are available from Home and are stored as private R2 documentation assets. The Access page also shows the test-contact email for users who do not yet have application access.
+
+Observe whether a tester can identify what the product is for and where to start within two minutes.
+
 ## Test strategy
 
-The next tests should focus on professional workflow value rather than point-cloud performance. Dense point-cloud and repeated-survey tests remain parked until suitable datasets are available.
+Focus on professional workflow value rather than point-cloud performance. Dense point-cloud and repeated-survey tests remain parked until suitable datasets are available.
 
 Do not mainly ask whether users like the interface. Give them realistic tasks and observe whether they can complete them without explanation.
 
@@ -32,7 +57,7 @@ Observe:
 
 Ask a conservation professional to:
 
-1. select a real site/object context
+1. select a real Site/Object context
 2. create a condition assessment
 3. choose category, severity, confidence and treatment priority
 4. create an intervention that addresses the condition
@@ -44,7 +69,7 @@ Ask a conservation professional to:
 
 Observe:
 
-- whether the distinction between observation, condition and intervention is natural
+- whether observation, condition and intervention are naturally distinct
 - whether severity/confidence/priority terminology is appropriate
 - which condition categories should become controlled vocabularies versus free text
 - whether before/after evidence linking is sufficiently explicit
@@ -62,7 +87,7 @@ On a phone, ask the tester to capture at least ten mixed records:
 - one voice note
 - GPS where useful
 
-Verify that project/site/object context stays selected between captures and that records can be refined later rather than requiring full cataloguing onsite.
+Verify that Project/Site/Object context stays selected between captures and that records can be refined later rather than requiring full cataloguing onsite.
 
 ## Scenario 4: offline field operation
 
@@ -114,8 +139,9 @@ With two Hupla-authorised users:
 
 Capture:
 
-- task completion without help
+- whether Home explains the product without assistance
 - time to first useful record
+- task completion without help
 - time for repeated field captures
 - number of corrections needed after field capture
 - navigation dead ends
@@ -124,7 +150,23 @@ Capture:
 - duplicate or failed offline sync attempts
 - whether users return to Catalog, Conservation or 3D naturally for different tasks
 - which existing spreadsheet/document/photo-folder workflow the product could replace, if any
+- which manual sections are actually used
+
+## Feedback format
+
+For useful pilot feedback, record:
+
+- user role and context
+- task attempted
+- result: completed / completed with help / failed
+- point of friction
+- exact terminology or metadata problem
+- workaround used outside Archeology Notes
+- severity: cosmetic / slows work / blocks work / evidence risk
+- suggested change, if the tester has one
 
 ## Decision rule
 
 Do not add large features because one tester requests them. Prioritise changes that repeatedly remove observed workflow friction, protect evidence/provenance or make the project understandable without explanation.
+
+The first pilot milestone is complete when several real users have completed the core evidence, field, conservation and spatial tasks and the findings can be converted into a prioritised testing report.

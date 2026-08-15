@@ -2,9 +2,17 @@
 
 Updated: 2026-08-15
 
+## Current product stage
+
+**User testing.**
+
+The application now has enough functional breadth to test the product hypothesis with archaeologists and conservation professionals. The next development priorities should be selected from observed workflow friction, evidence/provenance risks and repeated tester needs.
+
+New major phases should not be started simply because they are next in the numbered roadmap.
+
 ## Roadmap principle
 
-Development now follows what can be tested with available archaeological material. Dense point-cloud and repeated-survey capabilities remain implemented research paths, but they must not block user testing of the evidence, field and conservation workflows.
+Development follows what can be tested with available archaeological material. Dense point-cloud and repeated-survey capabilities remain implemented research paths, but they must not block user testing of evidence, field, conservation and spatial workflows.
 
 ## Phase 0: standalone foundation
 
@@ -16,31 +24,31 @@ Gate 0 passed on 2026-08-14.
 
 ## Phase 1: projects, records and Catalog
 
-Status: **implemented; explicit two-user privacy validation remains open**.
+Status: **implemented; active two-user privacy test**.
 
 Implemented: Projects, Sites, Physical Objects, project membership, notes/photos/documents/observations/measurements/voice, authorship, Private/Project/Public visibility, original R2 assets with SHA-256, project-aware Catalog, editing, audit history and structured context.
 
-Gate 1 remains: validate collaboration and private-record isolation with two real users.
+Gate 1: validate collaboration and private-record isolation with two real users.
 
 ## Phase 2: field capture
 
-Status: **implemented; practical field test remains open**.
+Status: **implemented; active mobile user test**.
 
 Implemented: mobile capture for camera/photo library, text notes, observations, measurements, browser voice recording, original audio retention, optional transcription, GPS, automatic author/time, persistent project/site/object context and field inbox.
 
 The original audio is evidence. Transcription remains derived information.
 
-Gate 2 remains: complete a representative mobile session with at least ten mixed field records.
+Gate 2: complete a representative mobile session with at least ten mixed field records.
 
 ## Phase 3: photographic 3D workspace
 
-Status: **implemented; production round-trip validation remains open**.
+Status: **implemented; active production spatial test**.
 
 Implemented: Representation registry, private R2 GLB derivatives, photographic default view, orbit/pan/zoom, Photo/Points/Hybrid modes, direct surface XYZ annotation, PostGIS PointZ anchors, Catalog records linked to 3D context and Show in 3D round trips.
 
 Casignana is the first real photogrammetry dataset. Its GLB remains a working derivative, not the preservation source.
 
-Gate 3 remains: complete the photographic model upload and Catalog ↔ 3D annotation round trip in production.
+Gate 3: complete the photographic model and Catalog ↔ 3D annotation round trip in production.
 
 ## Phase 4: dense point clouds and multiple representations
 
@@ -54,7 +62,7 @@ Gate 4 requires a genuine professional-size point-cloud dataset and is therefore
 
 ## Phase 5A: conservation and evidence workflow
 
-Status: **implemented in the combined pilot-hardening release; validation pending**.
+Status: **implemented; active user testing**.
 
 Implemented:
 
@@ -87,10 +95,13 @@ Do not build further geometric comparison logic without data that can validate i
 
 ## Phase 6A: pilot usability and intake
 
-Status: **implemented in the combined pilot-hardening release; user validation pending**.
+Status: **implemented; active user testing**.
 
 Implemented:
 
+- attractive Home/onboarding page for testers
+- downloadable Quick Start and full User Manual
+- manuals generated during the production build and synchronized to private R2
 - bulk photo/document upload to Catalog
 - project/type/context Catalog filtering
 - cross-project server-side evidence search
@@ -110,7 +121,7 @@ Still evidence-driven rather than automatically expanded:
 
 ## Phase 6B: offline field operation
 
-Status: **implemented in the combined pilot-hardening release; field reliability validation pending**.
+Status: **implemented; active field testing**.
 
 Implemented:
 
@@ -128,11 +139,13 @@ Implemented:
 - installable PWA manifest
 - service worker caches the Field shell and static application assets, but does not cache API responses or evidence-object responses
 
-Security boundary: offline field data is stored locally on the user's device until successful sync. Pilot users should therefore use trusted devices and remove local application data when a device is reassigned.
+Security boundary: offline field data is stored locally on the user's device until successful sync. Pilot users should use trusted devices and remove local application data when a device is reassigned.
 
 Gate 6B: capture mixed photos/voice/notes offline, close/reopen the Field workspace where supported, reconnect, sync without duplicates, and deliberately create one stale-context conflict to verify recovery.
 
 ## Phase 7: heritage intelligence
+
+Status: **future; do not start before user-test evidence supports it**.
 
 Possible later layer after real user records exist:
 
@@ -150,4 +163,4 @@ AI output must remain visibly separate from source observations and traceable to
 
 Keep compatibility routes open toward CIDOC CRM, CRMarchaeo, CRMsci, Arches/Arches for Science, W3C Web Annotation, IIIF, RO-Crate, GeoJSON, E57, COPC, glTF and 3D Tiles.
 
-These standards should support institutional adoption later without making the user-test prototype unnecessarily heavy today.
+These standards should support institutional adoption later without making the user-test product unnecessarily heavy today.
