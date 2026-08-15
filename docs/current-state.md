@@ -114,8 +114,16 @@ Implemented:
 - surface click → persistent PostGIS PointZ observation
 - spatial observation as normal Catalog record
 - Show in 3D spatial round trip
+- compact in-view display and camera controls rather than a large mobile toolbar
+- persistent Annotate action with explicit tap guidance
+- larger touch targets for spatial markers
+- responsive annotation panel: floating side sheet on desktop and bottom sheet on mobile
+- new annotations are completed without leaving the model viewport
+- existing annotations open in the same sheet for review, recentering, editing and full-record access
+- title, observation, site/object context, visibility and review state can be edited from 3D when permissions allow
+- review state is explicit as draft / reviewed / verified and retained in the normal record audit trail
 
-Casignana remains the first real photogrammetry test dataset. Gate 3 is now an active production user-test item.
+Casignana remains the first real photogrammetry test dataset. Gate 3 is now an active production user-test item, including mobile annotation usability rather than only the technical spatial round trip.
 
 ### Dense point-cloud / multi-representation prototype
 
@@ -183,4 +191,6 @@ The supplied archive remains the main photographic test dataset:
 - 8000 × 8000 RGB texture
 - no explicit CRS/acquisition metadata supplied
 
-A browser GLB derivative of roughly 13 MB was generated for the photographic workspace. Casignana remains useful for spatial and conservation interaction testing even though it is not a native TLS/LiDAR point cloud.
+The original uploaded archive is roughly 55 MB. The corrected browser GLB derivative is roughly 21 MB and retains the photographic texture, UV mapping and normals. Model responses are not browser-cached during the pilot so replacing a derivative is visible immediately.
+
+Casignana remains useful for spatial and conservation interaction testing even though it is not a native TLS/LiDAR point cloud.
