@@ -30,9 +30,9 @@ export default async function WorkspacePage({ searchParams }: { searchParams: Pr
     <AppShell user={user} active="3D Workspace">
       <header className="workspace-header">
         <div>
-          <p className="eyebrow">Phase 4 · multi-representation survey workspace</p>
+          <p className="eyebrow">3D evidence workspace</p>
           <h1>Survey layers in one spatial context</h1>
-          <p>Photogrammetry, dense point clouds and object-specific detail scans remain independent evidence layers. They can overlap in one registered project frame without pretending that the physical object and any one scan are the same thing.</p>
+          <p>Navigate the survey, place observations directly on the evidence, review existing annotations and keep the spatial link connected to the Catalog record.</p>
         </div>
         <div className={styles.switcher}>
           <span className={styles.label}><Box size={15} /> Project</span>
@@ -44,7 +44,7 @@ export default async function WorkspacePage({ searchParams }: { searchParams: Pr
 
       <WorkspaceViewer
         key={viewerKey}
-        project={{ id: selectedProject.id, slug: selectedProject.slug, name: selectedProject.name, role: selectedProject.role }}
+        project={{ id: selectedProject.id, slug: selectedProject.slug, name: selectedProject.name, role: selectedProject.role, currentUserEmail: user.email }}
         representations={representations}
         annotations={annotations}
         sites={sites.map((site) => ({ id: String(site.id), code: site.code ? String(site.code) : null, name: String(site.name) }))}
