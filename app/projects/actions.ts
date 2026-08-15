@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireCurrentUser } from "@/lib/current-user";
+import { addProjectMember, removeProjectMember, updateProjectMemberRole, type ProjectMemberRole } from "@/lib/project-members";
 import {
   createPhysicalObject,
   createProject,
@@ -26,6 +27,13 @@ function slugify(value: string) {
     .slice(0, 60);
 }
 
+async function projectFromForm(formData: FormData, userId: string) {
+  const slug = text(formData, "slug");
+  const project = slug ? await getProjectForUser(slug, userId) : null;
+  if (!project) throw new Error("Project not found.");
+  return { slug, project };
+}
+
 export async function createProjectAction(formData: FormData) {
   const user = await requireCurrentUser();
   const name = text(formData, "name");
@@ -45,9 +53,7 @@ export async function createProjectAction(formData: FormData) {
 
 export async function updateProjectAction(formData: FormData) {
   const user = await requireCurrentUser();
-  const slug = text(formData, "slug");
-  const project = await getProjectForUser(slug, user.localUserId);
-  if (!project) throw new Error("Project not found.");
+  const { slug, project } = await projectFromForm(formData, user.localUserId);
   const name = text(formData, "name");
   if (!name) throw new Error("Project name is required.");
 
@@ -63,9 +69,7 @@ export async function updateProjectAction(formData: FormData) {
 
 export async function createSiteAction(formData: FormData) {
   const user = await requireCurrentUser();
-  const slug = text(formData, "slug");
-  const project = await getProjectForUser(slug, user.localUserId);
-  if (!project) throw new Error("Project not found.");
+  const { slug, project } = await projectFromForm(formData, user.localUserId);
   const name = text(formData, "name");
   if (!name) throw new Error("Site name is required.");
 
@@ -81,9 +85,7 @@ export async function createSiteAction(formData: FormData) {
 
 export async function createPhysicalObjectAction(formData: FormData) {
   const user = await requireCurrentUser();
-  const slug = text(formData, "slug");
-  const project = await getProjectForUser(slug, user.localUserId);
-  if (!project) throw new Error("Project not found.");
+  const { slug, project } = await projectFromForm(formData, user.localUserId);
   const siteId = text(formData, "siteId");
   const name = text(formData, "name");
   if (!siteId || !name) throw new Error("Site and object name are required.");
@@ -98,5 +100,40 @@ export async function createPhysicalObjectAction(formData: FormData) {
     name,
     description: text(formData, "description") || null
   });
+  revalidatePath(`/projects/${slug}`);
+}
+
+export async function addProjectMemberAction(formData: FormData) {
+  const user = await requireCurrentUser();
+  const { slug, project } = await projectFromForm(formData, user.localUserId);
+  await addProjectMember({
+    projectId: String(project.id),
+    actorId: user.localUserId,
+    email: text(formData, "email"),
+    role: (text(formData, "role") || "contributor") as ProjectMemberRole
+  });
+  revalidatePath(`/projects/${slug}`);
+}
+
+export async function updateProjectMemberRoleAction(formData: FormData) {
+  const user = await requireCurrentUser();
+  const { slug, project } = await projectFromForm(formData, user.localUserId);
+  const memberId = text(formData, "memberId");
+  if (!memberId) throw new Error("Project member is required.");
+  await updateProjectMemberRole({
+    projectId: String(project.id),
+    actorId: user.localUserId,
+    memberId,
+    role: text(formData, "role") as ProjectMemberRole
+  });
+  revalidatePath(`/projects/${slug}`);
+}
+
+export async function removeProjectMemberAction(formData: FormData) {
+  const user = await requireCurrentUser();
+  const { slug, project } = await projectFromForm(formData, user.localUserId);
+  const memberId = text(formData, "memberId");
+  if (!memberId) throw new Error("Project member is required.");
+  await removeProjectMember({ projectId: String(project.id), actorId: user.localUserId, memberId });
   revalidatePath(`/projects/${slug}`);
 }

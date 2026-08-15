@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import PwaRegister from "@/components/pwa-register";
 import "./globals.css";
 import "./phase1.css";
+import "./testing-enhancements.css";
 
 export const metadata: Metadata = {
   title: "Archeology Notes | Hupla Labs",
