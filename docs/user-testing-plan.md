@@ -1,36 +1,130 @@
 # User testing plan
 
-## First serious test target
+Updated: 2026-08-15
 
-The first professional user test should happen after Phase 3 rather than after every technical phase.
+## Test strategy
 
-Required working loop:
+The next tests should focus on professional workflow value rather than point-cloud performance. Dense point-cloud and repeated-survey tests remain parked until suitable datasets are available.
 
-1. authorised user opens Casignana
-2. navigates a real photographic 3D model
-3. selects or clicks a physical location
-4. captures/uploads a photo, voice note or text note
-5. record keeps author, acquisition time and visibility
-6. record appears in Catalog
-7. `Show in 3D` returns to the spatial context
-8. another project member can see Project records but not Private records
+Do not mainly ask whether users like the interface. Give them realistic tasks and observe whether they can complete them without explanation.
 
-## What to observe
+## Scenario 1: evidence and Catalog
 
-Do not mainly ask whether users like the interface. Observe whether they can perform real documentation tasks without explanation.
+Ask the tester to:
 
-Key questions:
+1. open a project
+2. add several photographs/documents in one bulk upload
+3. link them to a Site or Physical Object
+4. find one record again using Catalog filters
+5. find another through global Search
+6. edit one record
+7. export the Catalog CSV
 
-- Is site/object context understandable?
-- Is Object versus Representation understandable?
-- Can field capture happen quickly enough?
-- Which catalog columns are actually useful?
-- When do users want private notes versus project evidence?
-- Does spatial linking save time or create friction?
-- Is the photographic model sufficient for orientation?
-- When do users need dense points rather than the textured surface?
-- Which existing spreadsheet/document workflow would they stop using, if any?
+Observe:
 
-## Evidence to preserve
+- whether Project, Site and Physical Object are understandable
+- whether the amount of metadata feels useful or administrative
+- which Catalog columns matter
+- whether search vocabulary matches professional terminology
+- whether bulk intake reduces friction compared with the tester's existing workflow
 
-Record task completion, friction, missing concepts, vocabulary corrections and requested metadata. Avoid adding large features based on one preference unless it solves an observed workflow problem.
+## Scenario 2: conservation chain
+
+Ask a conservation professional to:
+
+1. select a real site/object context
+2. create a condition assessment
+3. choose category, severity, confidence and treatment priority
+4. create an intervention that addresses the condition
+5. document method and materials
+6. link one existing photograph/record as before evidence
+7. add or select after evidence
+8. inspect the resulting record detail and timeline
+9. export the conservation CSV
+
+Observe:
+
+- whether the distinction between observation, condition and intervention is natural
+- whether severity/confidence/priority terminology is appropriate
+- which condition categories should become controlled vocabularies versus free text
+- whether before/after evidence linking is sufficiently explicit
+- whether the timeline helps reconstruct conservation history
+- what a professional report needs beyond the current CSV export
+
+## Scenario 3: mobile field capture online
+
+On a phone, ask the tester to capture at least ten mixed records:
+
+- photos
+- notes
+- observations
+- one measurement
+- one voice note
+- GPS where useful
+
+Verify that project/site/object context stays selected between captures and that records can be refined later rather than requiring full cataloguing onsite.
+
+## Scenario 4: offline field operation
+
+Prepare the Field workspace once while online, then deliberately remove connectivity.
+
+Ask the tester to:
+
+1. reopen Field where the device/browser supports the cached shell
+2. capture a note
+3. capture a photograph
+4. capture a voice note
+5. confirm the device queue shows the records
+6. close and reopen the app/browser
+7. confirm queued evidence remains on the device
+8. restore connectivity
+9. allow automatic sync or press Sync now
+10. verify each item appears once in the server-backed Field inbox/Catalog
+
+Then deliberately create one conflict by changing/removing the relevant server context before sync. Verify that the queued item remains visible and can be retried with the current context or explicitly discarded.
+
+Important: offline evidence is not considered server-preserved until successful sync is confirmed.
+
+## Scenario 5: photographic spatial round trip
+
+Using Casignana:
+
+1. navigate the photographic model
+2. click a physical location
+3. create a spatial observation
+4. open the Catalog record
+5. use Show in 3D
+6. confirm the viewer returns to the same spatial context
+
+Observe whether photographic 3D improves orientation and evidence retrieval enough to justify the extra interface complexity.
+
+## Scenario 6: two-user permissions
+
+With two Hupla-authorised users:
+
+1. both join the same pilot project
+2. user A creates a Project-visible record
+3. user B verifies they can read it
+4. user A creates a Private record
+5. user B verifies it is not visible
+6. test owner/admin versus contributor editing
+7. repeat with one condition/intervention record
+
+## What to measure
+
+Capture:
+
+- task completion without help
+- time to first useful record
+- time for repeated field captures
+- number of corrections needed after field capture
+- navigation dead ends
+- vocabulary corrections
+- missing metadata
+- duplicate or failed offline sync attempts
+- whether users return to Catalog, Conservation or 3D naturally for different tasks
+- which existing spreadsheet/document/photo-folder workflow the product could replace, if any
+
+## Decision rule
+
+Do not add large features because one tester requests them. Prioritise changes that repeatedly remove observed workflow friction, protect evidence/provenance or make the project understandable without explanation.
