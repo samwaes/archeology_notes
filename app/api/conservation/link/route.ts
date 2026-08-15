@@ -1,0 +1,8 @@
+import { NextResponse } from "next/server";
+import { requireCurrentUser } from "@/lib/current-user";
+import { linkEvidenceToIntervention } from "@/lib/conservation-record";
+import { getDatabase } from "@/lib/db";
+import { getProjectForUser } from "@/lib/records";
+
+export const runtime="nodejs";export const dynamic="force-dynamic";
+export async function POST(request:Request){const user=await requireCurrentUser();try{const body=await request.json() as Record<string,unknown>;const projectSlug=typeof body.projectSlug==="string"?body.projectSlug.trim():"";const interventionRecordId=typeof body.interventionRecordId==="string"?body.interventionRecordId.trim():"";const project=projectSlug?await getProjectForUser(projectSlug,user.localUserId):null;if(!project||!interventionRecordId)return NextResponse.json({error:"Project and intervention are required."},{status:400});const check=await getDatabase().query(`SELECT 1 FROM archeology_records WHERE id=$1::uuid AND project_id=$2::uuid AND record_type='intervention'`,[interventionRecordId,String(project.id)]);if(!check.rowCount)return NextResponse.json({error:"Intervention not found in this project."},{status:404});await linkEvidenceToIntervention({interventionRecordId,projectId:String(project.id),actorId:user.localUserId,beforeRecordId:typeof body.beforeRecordId==="string"&&body.beforeRecordId?body.beforeRecordId:null,afterRecordId:typeof body.afterRecordId==="string"&&body.afterRecordId?body.afterRecordId:null});return NextResponse.json({ok:true});}catch(error){return NextResponse.json({error:error instanceof Error?error.message:"Could not link evidence."},{status:500});}}

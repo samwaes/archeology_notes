@@ -6,31 +6,39 @@ Production: `https://archeology-notes.hupla.eu`
 
 ## Product question
 
-Can archaeologists and conservation professionals keep spatial surveys, field observations, photographs, documents and interpretation together without creating more administrative work?
+Can archaeologists and conservation professionals keep spatial surveys, field observations, photographs, documents, condition assessments and conservation history together without creating more administrative work?
 
 ## Current phase
 
-**Phase 4: dense point-cloud and multi-representation validation.**
+**Combined Phase 5A + 6A + 6B: conservation workflow and real-user pilot hardening.**
 
-The product now has a persistent project/catalog layer, mobile field capture, photographic 3D annotation and the first real dense point-cloud architecture. The implementation is merged; Gate 4 is deliberately still open until a genuine professional-size E57/LAS/LAZ/COPC dataset has been tested.
+Dense point-cloud Phase 4 remains implemented but its professional-scale validation is parked until suitable data is available. Repeated-survey geometric comparison is now Phase 5B and is also parked until appropriate repeated survey datasets exist.
+
+The active product direction is intentionally testable with ordinary archaeological photos, notes, documents and the existing Casignana photogrammetry model.
 
 Current implementation includes:
 
 - Projects, Sites and Physical Objects
 - Hupla identity plus project membership and roles
 - notes, photos, documents, observations, measurements and voice records
+- condition assessments and conservation interventions
+- intervention → condition and before/after evidence relationships
 - Private / Project / Public visibility
 - original assets in private Cloudflare R2 with provenance/checksums
-- editable Catalog and record detail
+- editable Catalog with bulk photo/document intake and CSV export
+- project/type/context Catalog filtering
+- cross-project server-side evidence search
+- reusable capture templates
 - mobile field capture with camera, voice, GPS and optional transcription
+- IndexedDB offline field queue including photo/audio Blob data
+- automatic/manual sync, de-duplication receipts and visible conflict recovery
+- installable PWA field shell
+- conservation timeline and CSV export
 - first-class 3D Representations separate from Physical Objects
 - photographic GLB workspace with persistent PostGIS XYZ annotations
 - Catalog → `Show in 3D` spatial round trip
 - multiple independent/overlapping mesh and point-cloud layers
-- preservation sources including E57, LAS, LAZ and COPC
-- COPC browser streaming through authenticated HTTP Range requests
-- point budget and octree-depth controls
-- independent layer visibility and opacity
+- COPC streaming through authenticated HTTP Range requests
 - source-to-project registration transforms
 - separate nominal resolution, registration RMSE and registration uncertainty
 
@@ -42,26 +50,31 @@ The earlier `/archeology-notes` route in `samwaes/hupla.eu` remains interaction/
 - one physical object may have many independent representations over time
 - original source assets remain immutable evidence
 - web-optimised assets remain explicit derivatives unless the delivered source is already suitable for that role
-- derivatives retain provenance to their source
 - field capture should be fast and classification can happen later
+- offline captures remain local evidence until server-confirmed sync
 - annotations target physical/spatial context, not screen coordinates
-- spatial observations remain normal Catalog records with author and visibility
+- condition/intervention records remain normal Catalog records with author and visibility
+- Catalog, Conservation and 3D are different views of connected evidence
 - Hupla owns identity; Archeology Notes owns project membership
 - R2 stores object bytes; PostgreSQL/PostGIS stores metadata, relationships and spatial knowledge
 - photographic 3D and dense point clouds are complementary representations, not interchangeable evidence
 - scan density does not equal registration accuracy
 - missing CRS, resolution or uncertainty remains unknown rather than being invented
-- comparison/change analysis must later respect registration uncertainty
+- geometric change analysis must respect registration uncertainty and is parked until suitable data exists
 
 ## Validation status
 
 - Gate 0 foundation: passed
-- Gate 1 two-user privacy/collaboration: still open
-- Gate 2 practical mobile field session: still open
-- Gate 3 Casignana photographic spatial round trip: still open in production
-- Gate 4 professional-size dense point-cloud test: active next validation
+- Gate 1 two-user privacy/collaboration: open
+- Gate 2 practical mobile field session: open
+- Gate 3 Casignana photographic spatial round trip: open
+- Gate 4 professional-size dense point-cloud test: parked until data is available
+- Gate 5A conservation workflow: ready for user validation
+- Gate 5B repeated-survey change analysis: parked until data is available
+- Gate 6A pilot usability/intake: ready for user validation
+- Gate 6B offline field sync/conflict workflow: ready for field validation
 
-See `docs/development-plan.md` for the detailed gates and roadmap.
+See `docs/development-plan.md` for the detailed roadmap.
 
 ## Documentation
 

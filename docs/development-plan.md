@@ -2,207 +2,152 @@
 
 Updated: 2026-08-15
 
+## Roadmap principle
+
+Development now follows what can be tested with available archaeological material. Dense point-cloud and repeated-survey capabilities remain implemented research paths, but they must not block user testing of the evidence, field and conservation workflows.
+
 ## Phase 0: standalone foundation
 
-Status: **complete and validated**
+Status: **complete and validated**.
 
-Implemented:
+Implemented: standalone Next.js/TypeScript application, Docker/Coolify deployment, PostgreSQL + PostGIS, Hupla identity/access and usage tracking, private Cloudflare R2, migrations and health diagnostics.
 
-- Next.js + TypeScript application
-- Docker/Coolify deployment at `https://archeology-notes.hupla.eu`
-- `/api/health` and deep dependency diagnostics
-- PostgreSQL + PostGIS 3.5 and migrations
-- central Hupla access behind Cloudflare Access
-- central Hupla usage/session tracking
-- private Cloudflare R2 connectivity
-- application shell and canonical documentation
+Gate 0 passed on 2026-08-14.
 
-Gate 0 passed on 2026-08-14. A Hupla-authorised user can open the deployed application and `/api/health?deep=1` reports database, PostGIS, R2 and Hupla access as ready.
+## Phase 1: projects, records and Catalog
 
-## Phase 1: real project, records and catalog
+Status: **implemented; explicit two-user privacy validation remains open**.
 
-Status: **implemented, Gate 1 multi-user validation still pending**
+Implemented: Projects, Sites, Physical Objects, project membership, notes/photos/documents/observations/measurements/voice, authorship, Private/Project/Public visibility, original R2 assets with SHA-256, project-aware Catalog, editing, audit history and structured context.
 
-Implemented:
+Gate 1 remains: validate collaboration and private-record isolation with two real users.
 
-- create and manage Projects
-- Site and Physical Object hierarchy
-- project membership and project roles
-- notes, photographs, documents, observations, measurements and voice record types
-- authorship and acquisition provenance
-- Private / Project / Public visibility
-- original uploads in private R2 with SHA-256 checksum
-- project-aware Catalog desktop table and mobile cards
-- record detail
-- record editing with permission checks
-- original author and original asset preserved through edits
-- audit history
-- basic structured search
+## Phase 2: field capture
 
-Casignana remains the first real project dataset. Additional projects can now be created through the application.
+Status: **implemented; practical field test remains open**.
 
-The pilot simplification remains: Hupla-authorised Archeology Notes users are automatically enrolled in Casignana. Explicit project invitations and role administration will replace this bootstrap after the first multi-user test.
+Implemented: mobile capture for camera/photo library, text notes, observations, measurements, browser voice recording, original audio retention, optional transcription, GPS, automatic author/time, persistent project/site/object context and field inbox.
 
-Gate 1: two authorised users can collaborate in one project without cross-user exposure of private records. Original photo/document uploads must persist in private R2 and retain author, acquisition date and source provenance.
+The original audio is evidence. Transcription remains derived information.
 
-## Phase 2: field prototype
+Gate 2 remains: complete a representative mobile session with at least ten mixed field records.
 
-Status: **implemented, Gate 2 field validation deferred until user test**
+## Phase 3: photographic 3D workspace
 
-Implemented:
+Status: **implemented; production round-trip validation remains open**.
 
-- mobile-first field capture workspace
-- project, site and physical-object context retained on the device between captures
-- camera capture and photo-library selection
-- rapid text note and observation capture
-- measurement value + unit capture
-- browser microphone recording
-- original audio retained in private R2
-- optional server-side voice transcription
-- transcription stored as derived text, never as replacement for original audio
-- GPS capture with browser-reported accuracy
-- acquisition time and author captured automatically
-- Private / Project / Public visibility at capture time
-- field inbox for later catalog refinement
-- field GPS and transcription shown in record detail
+Implemented: Representation registry, private R2 GLB derivatives, photographic default view, orbit/pan/zoom, Photo/Points/Hybrid modes, direct surface XYZ annotation, PostGIS PointZ anchors, Catalog records linked to 3D context and Show in 3D round trips.
 
-Transcription is provider-isolated behind `lib/transcription.ts`. The initial provider is OpenAI audio transcription when explicitly configured. Without a transcription key, voice capture still works and the original audio is retained.
+Casignana is the first real photogrammetry dataset. Its GLB remains a working derivative, not the preservation source.
 
-Not yet in Phase 2:
-
-- offline queue
-- background sync
-- conflict handling
-
-These remain later slices because the first goal is to validate whether the fast online field workflow is useful before adding offline complexity.
-
-Gate 2: a user can capture at least ten useful onsite observations on a phone without needing the desktop workflow. The test should include photos, a voice note, a text note, a measurement, GPS and later Catalog refinement.
-
-## Phase 3: real photographic 3D workspace
-
-Status: **implemented in code, deployment and spatial validation pending**
-
-Implemented:
-
-- first-class Representation registry separate from Physical Objects and source evidence
-- seeded Casignana photogrammetry representation with known source properties and explicit missing-CRS metadata
-- browser-ready GLB assets stored as private R2 derivatives rather than repository binaries
-- protected same-origin model streaming from R2
-- full textured photographic model as the default working view
-- orbit, pan and zoom navigation
-- Overview, Top, Apse, Floor and Wall viewpoints for the Casignana pilot
-- Photo, Points and Hybrid views
-- Points mode derives a dense vertex representation from the loaded web mesh and is not presented as an original LiDAR/TLS point cloud
-- direct surface raycasting for XYZ annotation
-- spatial anchors persisted as PostGIS `PointZ`
-- every spatial observation creates a normal Catalog record with author and visibility
-- spatial annotations respect Private / Project visibility rules
-- record detail exposes its XYZ anchor and `Show in 3D`
-- selecting a record through `Show in 3D` returns the viewer to that spatial context
-- owner/admin GLB replacement workflow without replacing the preservation source
-
-### Casignana browser derivative
-
-A full textured GLB derivative has been generated from the supplied Casignana OBJ and 8000 × 8000 texture for Phase 3 validation. It retains the full source mesh geometry used for the prototype, approximately 244,639 vertices and 486,261 triangles, while packaging the photographic texture into a browser-loadable asset of about 13 MB.
-
-The GLB is a web derivative. The supplied OBJ and texture remain the preservation/source evidence. The derivative must be uploaded once through the 3D Workspace after deployment so it is stored in the project's private R2 bucket and registered against the Casignana representation.
-
-Gate 3: deploy migration `0004_phase3_spatial_workspace.sql`, upload the Casignana GLB derivative, navigate the photographic model, create a spatial observation on the real surface, open it from Catalog, use `Show in 3D`, and verify that it returns to the same XYZ context.
+Gate 3 remains: complete the photographic model upload and Catalog ↔ 3D annotation round trip in production.
 
 ## Phase 4: dense point clouds and multiple representations
 
-Status: **implemented as a functional prototype, Gate 4 requires a real large point-cloud test**
+Status: **implemented as a functional prototype; Gate 4 parked until suitable data is available**.
+
+Implemented: E57/LAS/LAZ/COPC preservation strategy, COPC browser representation, authenticated R2 byte-range proxy, COPC hierarchy/LAZ decoding, point-budget/depth controls, overlapping representation layers, independent opacity/visibility, registration transforms, registration status, nominal resolution, RMSE and uncertainty.
+
+The current LOD approach is intentionally a prototype rather than a mature camera-driven streaming engine.
+
+Gate 4 requires a genuine professional-size point-cloud dataset and is therefore parked, not failed.
+
+## Phase 5A: conservation and evidence workflow
+
+Status: **implemented in the combined pilot-hardening release; validation pending**.
 
 Implemented:
 
-- multiple independent representations per project/site/physical object
-- optional parent representation for object-specific detail scans
-- acquisition date and coordinate-frame metadata per representation
-- preservation source formats including E57, LAS, LAZ and COPC
-- browser point-cloud format standardised on COPC (`.copc.laz`)
-- private R2 source and web-derivative asset separation
-- authenticated HTTP Range proxy from the application to private R2
-- TypeScript COPC hierarchy parsing and LAZ node decompression in the browser
-- Three.js rendering of selected COPC octree nodes
-- explicit point budget and octree-depth controls
-- multiple overlapping mesh and point-cloud layers in one workspace
-- independent layer visibility and opacity
-- Photo / Points / Hybrid modes across layers
-- source-to-project 4×4 registration transform per representation
-- registration state: unregistered / approximate / registered / verified
-- separate nominal resolution, registration RMSE and registration uncertainty
-- visible warnings when registration or uncertainty evidence is incomplete
-- spatial annotations can be created on an active mesh or point-cloud layer and remain linked to that representation
-- owner/admin representation creation and asset-management interface
-- project/site/object/parent validation so layers cannot be linked across projects
-- documented PDAL E57/LAS/LAZ → COPC conversion and preservation strategy in `docs/point-cloud-ingestion.md`
+- condition-assessment records
+- condition category, severity, confidence, extent and treatment priority
+- conservation interventions with planned/in-progress/completed/monitoring status
+- method, materials and outcome
+- intervention → condition relationship
+- explicit before/after evidence links to ordinary Catalog records
+- conservation metadata on normal record-detail pages
+- conservation timeline
+- conservation CSV export
+- reusable project capture templates
 
-### Deliberate prototype boundary
+Gate 5A: a conservation user can document an observed condition, link it to a physical context, create an intervention, attach before/after evidence and understand the history without using the underlying database directly.
 
-The current viewer uses real COPC range requests and octree nodes, but the first LOD strategy is a point-budget + maximum-depth selection rather than a mature camera-driven screen-space-error scheduler. This is sufficient to test whether dense survey layers and spatial evidence are useful in the product before investing in a full streaming engine.
+## Phase 5B: repeated-survey comparison
 
-Browser uploads are also deliberately limited to 220 MB source assets and 140 MB web derivatives. Multi-gigabyte institutional ingestion belongs in a later multipart upload + conversion worker, not in the Next.js request path.
+Status: **parked until appropriate repeated survey datasets are available**.
 
-Gate 4: deploy migration `0005_phase4_pointcloud_layers.sql`, ingest a representative E57/LAS/LAZ/COPC survey, retain the original source, register a COPC web representation, open it alongside another representation, inspect it at multiple point budgets, create a point-cloud annotation, and verify acceptable responsiveness and spatial round-trip behaviour on a realistically large dataset.
-
-Do not mark Gate 4 passed until a genuine professional-size dataset has been tested.
-
-## Phase 5: comparison and conservation workflow
-
-Implement:
+Future scope:
 
 - survey A/B overlay
 - fade and split comparison
 - distance/change visualisation
-- registration uncertainty warnings applied to change interpretation
-- conservation interventions
-- condition classifications
-- object timeline
+- uncertainty-aware interpretation
+- change thresholds that never imply significance below registration/survey uncertainty
 
-Gate 5: users can review change without the interface implying significance below survey/registration uncertainty.
+Do not build further geometric comparison logic without data that can validate it.
 
-## Phase 6: pilot hardening and offline robustness
+## Phase 6A: pilot usability and intake
 
-Driven by real user evidence:
+Status: **implemented in the combined pilot-hardening release; user validation pending**.
 
-- offline field queue
-- IndexedDB
-- conflict handling
-- bulk upload
-- metadata templates
-- spreadsheet import/export
-- richer project roles
-- batch actions
-- tablet optimisation
-- improved search
-- multipart survey ingestion and asynchronous conversion if Gate 4 proves the need
+Implemented:
+
+- bulk photo/document upload to Catalog
+- project/type/context Catalog filtering
+- cross-project server-side evidence search
+- search includes conservation categories/intervention methods plus author and physical context
+- reusable metadata/capture templates
+- Catalog CSV export
+- conservation CSV export
+- responsive conservation, Catalog and field workflows for phone/tablet use
+- condition/intervention records remain normal Catalog records with generic metadata editing
+
+Still evidence-driven rather than automatically expanded:
+
+- richer role administration
+- spreadsheet import
+- large batch actions
+- institutional report templates
+
+## Phase 6B: offline field operation
+
+Status: **implemented in the combined pilot-hardening release; field reliability validation pending**.
+
+Implemented:
+
+- IndexedDB device queue for field captures
+- queued Blob/File evidence, not only text metadata
+- online/offline state indicator
+- explicit Save offline behaviour
+- automatic sync when connectivity returns
+- manual Sync now
+- client capture IDs and server sync receipts for ordinary retry de-duplication
+- project/site/object and permission validation repeated at sync time
+- failed validation remains visible as a conflict instead of being silently discarded
+- retry a conflict using the current field context
+- explicit discard action
+- installable PWA manifest
+- service worker caches the Field shell and static application assets, but does not cache API responses or evidence-object responses
+
+Security boundary: offline field data is stored locally on the user's device until successful sync. Pilot users should therefore use trusted devices and remove local application data when a device is reassigned.
+
+Gate 6B: capture mixed photos/voice/notes offline, close/reopen the Field workspace where supported, reconnect, sync without duplicates, and deliberately create one stale-context conflict to verify recovery.
 
 ## Phase 7: heritage intelligence
 
-Possible later layer:
+Possible later layer after real user records exist:
 
 - cross-source retrieval
 - evidence-linked AI summaries
+- related-evidence suggestions
 - entity/relationship suggestions
 - conflicting interpretation detection
 - human confirmation workflow
 - knowledge-graph projections
 
-AI output must remain traceable to evidence and visibly separate from source observations.
+AI output must remain visibly separate from source observations and traceable to evidence.
 
 ## Phase 8: interoperability and institutional future
 
-Keep compatibility routes open toward:
+Keep compatibility routes open toward CIDOC CRM, CRMarchaeo, CRMsci, Arches/Arches for Science, W3C Web Annotation, IIIF, RO-Crate, GeoJSON, E57, COPC, glTF and 3D Tiles.
 
-- CIDOC CRM
-- CRMarchaeo
-- CRMsci
-- Arches / Arches for Science
-- W3C Web Annotation
-- IIIF
-- RO-Crate
-- GeoJSON
-- E57
-- COPC
-- glTF
-- 3D Tiles
+These standards should support institutional adoption later without making the user-test prototype unnecessarily heavy today.
