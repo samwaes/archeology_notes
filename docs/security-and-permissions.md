@@ -29,14 +29,37 @@ The first external pilot may keep anonymous public delivery disabled even while 
 
 Visibility and ownership checks must be performed on the server for every record read/write and signed-object URL. Client-side hiding is never sufficient access control.
 
+Offline capture does not bypass server enforcement. Project access, site/object context and record rules are revalidated when a queued capture synchronises.
+
+## Offline device queue
+
+Phase 6B stores unsynchronised field records in browser IndexedDB on the capture device. This may include photographs and audio Blobs.
+
+Security implications:
+
+- use trusted or managed field devices
+- device/browser profile access becomes part of the temporary security boundary
+- do not treat an offline queue as server-backed preservation until sync is confirmed
+- clear site data when a device is transferred to another user
+- rejected sync items remain local until explicitly retried or discarded
+- service-worker caching is restricted to the Field shell/static assets; API responses and evidence-object responses are not deliberately cached
+
+A future institutional deployment may add managed-device controls, encrypted offline packages or explicit offline-project provisioning if pilots demonstrate the need.
+
+## Sync integrity
+
+Offline captures receive a client capture ID. The server stores a sync receipt after successful ingestion so normal retries do not create duplicate records.
+
+This is pragmatic pilot idempotency, not a distributed transaction across PostgreSQL and R2. Production hardening should add stronger ingestion transactions/reconciliation if large-scale offline use proves necessary.
+
 ## R2
 
 The R2 bucket remains private.
 
-Credentials remain server-side. The browser receives only short-lived signed upload or read URLs for authorised objects.
+Credentials remain server-side. The browser receives only authorised application responses or short-lived signed read URLs.
 
-Object keys must be derived server-side from project/user/asset identifiers rather than trusted from arbitrary client paths.
+Object keys are derived server-side from project/user/asset identifiers rather than trusted from arbitrary client paths.
 
 ## Auditability
 
-Meaningful permission, visibility and record-history changes should produce audit events. Deleting or replacing preservation originals should require stronger controls than ordinary note editing.
+Meaningful permission, visibility, condition, intervention, relationship and record-history changes should produce audit events. Deleting or replacing preservation originals requires stronger controls than ordinary note editing.
