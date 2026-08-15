@@ -1,22 +1,51 @@
 # Archeology Notes
 
-Standalone Hupla Labs working prototype for archaeologists and conservation professionals.
+Standalone Hupla Labs product in **user testing** for archaeologists, conservators and heritage documentation teams.
 
 Production: `https://archeology-notes.hupla.eu`
 
+Testing contact: `samwaes@gmail.com`
+
 ## Product question
 
-Can archaeologists and conservation professionals keep spatial surveys, field observations, photographs, documents, condition assessments and conservation history together without creating more administrative work?
+Can archaeologists and conservation professionals keep spatial surveys, field observations, photographs, documents, condition assessments and conservation history connected without creating more administrative work?
 
-## Current phase
+## Current stage
 
-**Combined Phase 5A + 6A + 6B: conservation workflow and real-user pilot hardening.**
+**User testing: field, conservation, evidence and spatial workflow pilot.**
 
-Dense point-cloud Phase 4 remains implemented but its professional-scale validation is parked until suitable data is available. Repeated-survey geometric comparison is now Phase 5B and is also parked until appropriate repeated survey datasets exist.
+The implementation is now broad enough for real workflow testing. Development should be driven by observed user friction rather than by adding another major phase before the current product is used.
 
-The active product direction is intentionally testable with ordinary archaeological photos, notes, documents and the existing Casignana photogrammetry model.
+The active validation focus is:
 
-Current implementation includes:
+- first-session onboarding and terminology
+- Project / Site / Physical Object structure
+- Catalog evidence intake, filtering, editing and search
+- mobile Field capture with online and offline operation
+- condition → intervention → before/after evidence workflow
+- Private / Project visibility with multiple users
+- photographic 3D spatial round trips
+- practical value of connecting these workflows in one product
+
+Dense point-cloud Phase 4 remains implemented but professional-scale validation is parked until suitable data is available. Repeated-survey geometric comparison is Phase 5B and remains parked until appropriate repeated survey datasets exist.
+
+## User onboarding
+
+The application Home page is now the starting point for pilot users. It explains the purpose, intended users and five-step quick start, and links to two downloadable PDF guides.
+
+The PDFs are generated from maintained source during the production build, copied into the application image and synchronized to the private Cloudflare R2 bucket at startup:
+
+- `manuals/Archeology-Notes-Quick-Start.pdf`
+- `manuals/Archeology-Notes-User-Manual.pdf`
+
+Authenticated download routes:
+
+- `/manuals/quick-start.pdf`
+- `/manuals/user-manual.pdf`
+
+The Home and Access pages both show `samwaes@gmail.com` for questions and test-user requests.
+
+## Current implementation
 
 - Projects, Sites and Physical Objects
 - Hupla identity plus project membership and roles
@@ -42,7 +71,7 @@ Current implementation includes:
 - source-to-project registration transforms
 - separate nominal resolution, registration RMSE and registration uncertainty
 
-The earlier `/archeology-notes` route in `samwaes/hupla.eu` remains interaction/design history only. This repository is the canonical product implementation.
+The earlier `/archeology-notes` route in `samwaes/hupla.eu` remains interaction/design history only. This repository is the canonical implementation.
 
 ## Core design decisions
 
@@ -65,16 +94,16 @@ The earlier `/archeology-notes` route in `samwaes/hupla.eu` remains interaction/
 ## Validation status
 
 - Gate 0 foundation: passed
-- Gate 1 two-user privacy/collaboration: open
-- Gate 2 practical mobile field session: open
-- Gate 3 Casignana photographic spatial round trip: open
+- Gate 1 two-user privacy/collaboration: active user test
+- Gate 2 practical mobile field session: active user test
+- Gate 3 Casignana photographic spatial round trip: active user test
 - Gate 4 professional-size dense point-cloud test: parked until data is available
-- Gate 5A conservation workflow: ready for user validation
+- Gate 5A conservation workflow: active user test
 - Gate 5B repeated-survey change analysis: parked until data is available
-- Gate 6A pilot usability/intake: ready for user validation
-- Gate 6B offline field sync/conflict workflow: ready for field validation
+- Gate 6A pilot usability/intake: active user test
+- Gate 6B offline field sync/conflict workflow: active field test
 
-See `docs/development-plan.md` for the detailed roadmap.
+See `docs/user-testing-plan.md` for the current pilot scenarios and `docs/development-plan.md` for the detailed roadmap.
 
 ## Documentation
 
@@ -88,6 +117,7 @@ See `docs/development-plan.md` for the detailed roadmap.
 - `docs/asset-and-preservation-strategy.md`
 - `docs/deployment.md`
 - `docs/user-testing-plan.md`
+- `docs/user-documentation.md`
 - `docs/decisions.md`
 - `docs/sample-data/casignana.md`
 
@@ -101,4 +131,4 @@ npm run migrate
 npm run dev
 ```
 
-Production runs migrations automatically before starting the standalone Next.js server.
+`npm run build` generates the current Quick Start and User Manual PDFs. Production startup runs migrations, synchronizes those PDFs to private R2 and then starts the standalone Next.js server.
