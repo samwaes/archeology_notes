@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { Box, Camera, Database, FolderKanban, Search, ShieldCheck } from "lucide-react";
+import { Box, Camera, Database, FolderKanban, Search, ShieldCheck, Stethoscope } from "lucide-react";
 import type { CurrentUser } from "@/lib/current-user";
 
 const navigation = [
   { href: "/projects", label: "Projects", icon: FolderKanban },
   { href: "/catalog", label: "Catalog", icon: Database },
   { href: "/field", label: "Field", icon: Camera },
+  { href: "/conservation", label: "Conservation", icon: Stethoscope },
   { href: "/workspace", label: "3D Workspace", icon: Box },
   { href: "/search", label: "Search", icon: Search }
 ];
