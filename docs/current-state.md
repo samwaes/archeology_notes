@@ -4,173 +4,201 @@ Updated: 2026-08-15
 
 ## Position
 
-Archeology Notes has moved from a Hupla discussion mockup into a standalone working prototype intended for testing with archaeologists and conservation professionals.
+Archeology Notes is a standalone working prototype for archaeologists and conservation professionals. The product tests whether spatial surveys, field observations, photographs, documents, condition assessments and conservation history can stay connected without forcing practitioners into a heavy database workflow.
 
 Canonical implementation repository: `samwaes/archeology_notes`.
 
 Production: `https://archeology-notes.hupla.eu`.
 
-The earlier prototype remains in `samwaes/hupla.eu` under `/archeology-notes` as design and interaction history only. New product development belongs in this repository.
+The earlier `/archeology-notes` route in `samwaes/hupla.eu` is retained as interaction/design history only.
 
-## Infrastructure status
+## Validated foundation
 
-Phase 0 passed on 2026-08-14.
+Phase 0 passed on 2026-08-14:
 
-Validated production foundation:
-
-- standalone Next.js/TypeScript application in Coolify
-- Cloudflare Access protecting `archeology-notes.hupla.eu`
-- central Hupla identity, application grant and usage/session model
+- standalone Next.js/TypeScript app in Coolify
+- Cloudflare Access + central Hupla identity/access
 - PostgreSQL with PostGIS 3.5
-- migration runner executed on container startup
+- migration runner
 - private Cloudflare R2 bucket `archeology-notes`
-- `/api/health?deep=1` returning `ready`
+- health diagnostics reporting ready
 
-## Current working product
+## Working product today
 
-Phase 1 provides the persistent project and catalog loop:
+### Projects, records and Catalog
 
-- create and manage Projects
-- Sites and Physical Objects
-- Hupla-authenticated project membership
-- Private / Project / Public visibility
-- notes, photos, documents, observations, measurements and voice record types
-- authorship and acquisition provenance
-- original files in private R2 with SHA-256 checksums
-- project-aware Catalog desktop table and mobile cards
-- record detail and editing
-- permission checks for record editing
-- basic search
-- audit events
+The app supports Projects, Sites, Physical Objects, project membership, authorship, Private/Project/Public visibility and normal evidence records: notes, photos, documents, observations, measurements and voice.
 
-Gate 1 still needs an explicit two-user validation, especially around private-record isolation and owner/admin editing.
+Original uploaded files are retained in private R2 with SHA-256 provenance. Catalog records can be edited without changing original authorship or original assets.
 
-Phase 2 adds the first real onsite capture workflow:
+The current pilot-hardening release adds:
 
-- mobile-first field workspace
-- persistent project/site/object context on the device
-- camera and photo-library capture
-- quick note and observation capture
-- measurement value and unit
-- browser microphone recording
-- original audio retained in R2
-- optional server-side transcription
-- GPS position and browser-reported accuracy
+- bulk photo/document intake, up to 12 files per batch
+- project/type/context Catalog filtering
+- cross-project evidence search
+- search over conservation categories, intervention methods, authors and physical context
+- Catalog CSV export
+
+Gate 1 still needs explicit two-user privacy and collaboration validation.
+
+### Field capture, including offline operation
+
+The field workflow supports:
+
+- camera/photo library
+- voice recording with original audio retained
+- optional transcription as derived text
+- rapid note and observation capture
+- measurements
+- GPS and browser-reported accuracy
 - automatic author and acquisition time
-- field inbox for later Catalog refinement
+- persistent project/site/object context
+- reusable project capture templates
 
-The original audio remains evidence. A transcription is derived text and can fail or be disabled without losing the voice note. Gate 2 field validation has been deliberately deferred until an onsite-style phone test is convenient.
+The current pilot-hardening release adds real offline behaviour:
 
-Phase 3 connects the persistent record layer to a real photographic 3D representation:
+- IndexedDB device queue stores structured metadata plus photo/audio Blob data
+- captures can be saved with no connectivity
+- automatic sync when connectivity returns
+- manual Sync now control
+- client capture IDs and server sync receipts reduce retry duplicates
+- permissions and project/site/object context are validated again when syncing
+- rejected sync items remain visible as conflicts
+- a conflict can be retried against the current context or explicitly discarded
+- installable PWA manifest
+- Field shell and static assets can be cached by the service worker
+- API responses and evidence-object responses are not service-worker cached
 
-- Representation is a first-class database entity and remains separate from the Physical Object
-- Casignana is seeded as the first photogrammetry representation
-- a web GLB derivative is stored in private R2, not committed as the preservation source
-- the 3D viewer defaults to the photographic textured mesh
-- orbit, pan, zoom and Casignana-specific camera viewpoints are supported
-- users can click a photographic surface and create a persistent XYZ observation
-- XYZ anchors are stored as PostGIS `PointZ`
-- a spatial observation creates a normal Catalog record with the same author and visibility controls
-- a Catalog record with a spatial anchor exposes `Show in 3D`
+Security implication: unsynced field evidence is temporarily present on the user's local device. Pilot users should use trusted devices and clear local application data when a device is reassigned.
 
-Gate 3 still requires production round-trip validation with the generated Casignana GLB derivative.
+Gate 2 and Gate 6B still require practical field validation.
 
-Phase 4 generalises the 3D workspace from one photographic model into a multi-representation survey environment:
+### Conservation workflow
 
-- one project, site or physical object can have multiple independent representations
-- a detail scan can reference a parent representation without being merged into it
-- photogrammetry, mesh and point-cloud layers can overlap in the same project workspace
-- each layer has its own source format, acquisition date, coordinate frame and source-to-project transform
-- source E57/LAS/LAZ/COPC can be preserved unchanged in private R2
-- COPC is the first browser point-cloud representation
-- private R2 point clouds are exposed only through an authenticated range-capable application endpoint
-- COPC metadata and octree hierarchy are read by range request
-- selected LAZ nodes are decompressed client-side and rendered with Three.js
-- the viewer exposes point-budget and octree-depth controls
-- layers have independent visibility and opacity
-- Photo / Points / Hybrid modes can combine photographic and point-cloud evidence
-- registration status, nominal resolution, RMSE and wider registration uncertainty are separate fields
-- missing registration evidence is visible rather than silently treated as accurate
-- spatial records remain attached to the representation on which they were observed, while their display can use the stored source-to-project transform
-- project owners/admins can create layers, preserve source files, upload COPC/GLB web representations and edit registration metadata
+A dedicated Conservation workspace now treats conservation history as first-class project evidence.
 
-Gate 4 is not passed yet. The implementation now needs a genuine dense E57/LAS/LAZ/COPC test dataset to validate responsiveness, layer overlap, coordinate handling and annotation behaviour at professional survey scale.
+Implemented:
 
-## What the discussion prototype established
+- condition-assessment records
+- category
+- severity: low / moderate / high / critical
+- confidence: low / medium / high
+- extent
+- treatment priority: monitor / routine / urgent / emergency
+- intervention records
+- intervention status: planned / in progress / completed / monitoring
+- method
+- materials
+- outcome / follow-up
+- intervention → condition relationship
+- before/after links to ordinary Catalog records
+- conservation timeline
+- reusable capture templates
+- conservation CSV export
+- condition/intervention details visible on normal record-detail pages
 
-The mockup evolved through several stages:
+Condition and intervention records remain normal Catalog records, so authorship, visibility, project context and audit history stay consistent with the rest of the product.
 
-1. object-centric evidence and field-note concept
-2. visual-first point-cloud annotations
-3. real Three.js navigation
-4. site → scene → physical object → representation hierarchy
-5. overlapping scans and registration uncertainty
-6. multi-user catalog and field-capture concept
-7. integration of the supplied Roman Villa of Casignana photogrammetry model
+Gate 5A now needs a conservation professional to document one real condition and intervention chain and judge whether the workflow is useful and appropriately lightweight.
 
-The strongest design conclusions are retained in the standalone product.
+### Photographic 3D workspace
 
-## Core findings
+Phase 3 connects normal Catalog records to a real photographic representation:
+
+- Representation is separate from the Physical Object
+- Casignana is the first photogrammetry representation
+- web GLB is a private R2 derivative, not the preservation source
+- photographic default view
+- Photo / Points / Hybrid modes
+- orbit / pan / zoom
+- surface click creates persistent PostGIS PointZ observation
+- spatial observation is also a normal Catalog record
+- Show in 3D returns a record to its stored spatial context
+
+Gate 3 still needs the final production round-trip validation with the generated Casignana GLB.
+
+### Dense point-cloud / multi-representation prototype
+
+Phase 4 is implemented but deliberately not validated because the project currently lacks the right professional datasets.
+
+Implemented:
+
+- E57/LAS/LAZ/COPC preservation strategy
+- COPC browser representation
+- authenticated R2 byte-range access
+- browser COPC hierarchy and LAZ node decoding
+- point-budget/depth controls
+- overlapping representations
+- independent visibility and opacity
+- registration transforms
+- registration state
+- nominal resolution, RMSE and registration uncertainty kept separate
+
+Gate 4 is parked until a genuine professional-size point-cloud dataset is available.
+
+## Roadmap adjustment
+
+The original Phase 5 mixed conservation workflow with repeated-survey geometric change analysis. These have now been split.
+
+### Phase 5A
+
+Conservation and evidence workflow. Implemented and awaiting user validation.
+
+### Phase 5B
+
+Repeated-survey comparison, fade/split views, distance/change maps and uncertainty-aware change interpretation. Parked until appropriate repeated survey datasets exist.
+
+### Phase 6A
+
+Pilot usability: bulk intake, templates, improved search, responsive workflows and exports. Implemented and awaiting user validation.
+
+### Phase 6B
+
+Offline field operation: IndexedDB queue, sync, conflicts and installable field shell. Implemented and awaiting field validation.
+
+### Phase 7
+
+Potential heritage intelligence after enough genuine evidence exists: cross-source retrieval, evidence-linked summaries, related-evidence suggestions, conflicting interpretations and human-confirmed relationship proposals.
+
+### Phase 8
+
+Institutional interoperability route: CIDOC CRM, CRMarchaeo, CRMsci, Arches/Arches for Science, W3C Web Annotation, IIIF, RO-Crate, GeoJSON, E57, COPC, glTF and 3D Tiles.
+
+## Core findings retained
 
 ### Physical object is not the scan
 
-A wall, capital, trench, room or artefact is a persistent physical entity. A LiDAR scan, photogrammetry mesh, macro scan or historical survey is a representation of that entity at a point in time.
-
-The product therefore supports a direction where:
-
-- one physical object has many representations
-- one survey can cover many physical objects
-- multiple overlapping surveys coexist in one registered project frame
-- annotations stay linked to the representation and evidence from which they were made
+A wall, capital, trench, room or artefact is persistent. A LiDAR survey, photogrammetry model, macro scan or historical survey is a representation of it at a point in time.
 
 ### Original evidence and derivatives must remain distinguishable
 
-A source OBJ, E57, LAS/LAZ, image, audio file or document is preservation evidence. Browser-optimised GLB, COPC, contrast-enhanced image, transcription or AI analysis is a derivative unless the delivered source was already in that format.
+Source OBJ/E57/LAS/LAZ/images/audio/documents are evidence. GLB/COPC conversions, transcriptions, image enhancements and future AI analysis are explicit derivatives unless they were supplied as the original source.
 
-The system must never silently replace the original with the derivative.
+### Dense points do not equal accurate change detection
 
-### Registration accuracy is not scan density
-
-Dense points do not automatically mean accurate change detection. Nominal point resolution, registration RMSE and broader registration uncertainty are separate concepts and are stored separately.
-
-This becomes a hard requirement for Phase 5 change/comparison tools.
+Nominal point spacing, registration RMSE and broader registration uncertainty are different concepts. Phase 5B must respect them before displaying change as meaningful.
 
 ### Field capture must be faster than cataloguing
 
-Onsite users should be able to record a photo, voice note, text note or measurement in seconds. Author, time, current project/site/object context and location should be captured automatically where possible. Detailed classification can happen later.
+Capture should take seconds. Detailed classification can happen later, which is why the Field queue and Catalog/Conservation refinement flows remain separate.
 
-### Catalog and 3D are two views of the same evidence
+### Catalog, 3D and Conservation are views of the same evidence
 
-A catalog record should be able to open its spatial context in the 3D workspace. A spatial annotation should reveal the related records, images, documents and observations.
+The product should not create isolated subsystems. A spatial annotation, field photo, condition assessment and intervention history should all resolve back to the same project/site/object evidence graph.
 
-### Authorship and visibility are first-class data
+### Authorship and visibility are first-class
 
-Every contribution retains its author. Records can be Private, Project or Public. Changing visibility does not duplicate the record and does not change its provenance.
+Every contribution retains its author and Private/Project/Public visibility. Changing visibility or classification never rewrites provenance.
 
 ## Casignana sample dataset
 
-The supplied archive contains a textured photogrammetry model:
+The supplied archive remains the main photographic test dataset:
 
 - `casignana2.obj`
 - `casignana.jpg`
 - approximately 244,639 vertices
-- approximately 486,261 triangular faces
+- approximately 486,261 triangles
 - 8000 × 8000 RGB texture
-- approximate extent 21.21 × 14.95 × 6.40 source units
+- no explicit CRS/acquisition metadata supplied
 
-No explicit coordinate reference or acquisition metadata was supplied with the archive.
-
-For Phase 3, a full textured GLB derivative has been generated from the supplied OBJ and texture. It keeps the full prototype mesh geometry and packages the photographic texture into a browser-loadable file of about 13 MB.
-
-Casignana remains useful for photogrammetry and spatial-annotation validation, but it is not a native dense LiDAR/TLS dataset. Phase 4 therefore requires an additional real point-cloud dataset before its performance and professional usability gate can be considered validated.
-
-## Point-cloud preservation route
-
-The canonical workflow is documented in `docs/point-cloud-ingestion.md`:
-
-- preserve the acquired E57/LAS/LAZ/COPC source in R2 with checksum
-- retain known coordinate, acquisition, resolution and registration metadata
-- derive COPC where necessary for interactive access
-- never invent missing CRS or uncertainty data
-- use the same source file as the web stream when the delivered source is already COPC and there is no preservation reason to duplicate it
-- move multi-gigabyte upload/conversion to a dedicated ingestion worker only after Gate 4 demonstrates the need
+A browser GLB derivative of roughly 13 MB was generated for the photographic workspace. Casignana remains useful for spatial and conservation interaction testing even though it is not a native TLS/LiDAR point cloud.
