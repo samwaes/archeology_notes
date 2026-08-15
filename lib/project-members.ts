@@ -5,6 +5,30 @@ export type ProjectMemberRole = "owner" | "admin" | "contributor" | "viewer";
 
 const ROLES = new Set<ProjectMemberRole>(["owner", "admin", "contributor", "viewer"]);
 
+export async function ensureCasignanaPilotMembership(userId: string) {
+  await getDatabase().query(
+    `INSERT INTO archeology_project_memberships (project_id, user_id, role)
+     SELECT project.id, $1::uuid, 'contributor'
+     FROM archeology_projects project
+     WHERE project.slug = 'casignana'
+       AND NOT EXISTS (
+         SELECT 1
+         FROM archeology_project_memberships membership
+         WHERE membership.project_id = project.id AND membership.user_id = $1::uuid
+       )
+       AND NOT EXISTS (
+         SELECT 1
+         FROM archeology_audit_events event
+         WHERE event.project_id = project.id
+           AND event.entity_type = 'user'
+           AND event.entity_id = $1::uuid
+           AND event.action = 'project.member.removed'
+       )
+     ON CONFLICT (project_id, user_id) DO NOTHING`,
+    [userId]
+  );
+}
+
 export async function listProjectMembers(projectId: string) {
   const result = await getDatabase().query(
     `SELECT member_user.id,
@@ -46,7 +70,7 @@ function assertRole(value: string): asserts value is ProjectMemberRole {
 }
 
 function assertCanAssign(actor: ProjectMemberRole, requested: ProjectMemberRole) {
-  if (!['owner', 'admin'].includes(actor)) throw new Error("Only project owners or admins can manage members.");
+  if (!["owner", "admin"].includes(actor)) throw new Error("Only project owners or admins can manage members.");
   if (actor === "admin" && ["owner", "admin"].includes(requested)) {
     throw new Error("Only a project owner can assign owner or admin roles.");
   }
